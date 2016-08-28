@@ -14,5 +14,6 @@
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
+#include <assert.h>
 
 #include "helper_vulkan.h"
