@@ -1,1 +1,1 @@
-void VulkanTest();
+void VulkanTest(HWND hWnd);
