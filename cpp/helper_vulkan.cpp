@@ -19,7 +19,10 @@ void VulkanTest(HWND hWnd)
 	res = vkEnumeratePhysicalDevices(inst, &numDevices, devices);
 	assert(!res);
 
-	VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+	float priorities[] = { 0 };
+	VkDeviceQueueCreateInfo devQueueInfos[] = { { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, 1, 0, priorities } };
+	const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, _countof(deviceExtensions), deviceExtensions };
 	VkDevice device = nullptr;
 	res = vkCreateDevice(devices[0], &devInfo, nullptr, &device);
 	assert(!res);
@@ -40,8 +43,9 @@ void VulkanTest(HWND hWnd)
 	res = vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain);
 	assert(!res);
 
-	uint32_t swapChainCount = 0;
-	res = vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr);
+	uint32_t swapChainCount = 2;
+	VkImage images[2];
+	res = vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, images);
 	assert(!res);
 
 	VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
@@ -54,10 +58,48 @@ void VulkanTest(HWND hWnd)
 	res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
 	assert(!res);
 
+	VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+	VkCommandPool commandPool;
+	res = vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool);
+	assert(!res);
+
+	uint32_t numPhysicalDevices = 0;
+	res = vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, nullptr);
+	assert(!res);
+
+	assert(numPhysicalDevices == 1);
+	VkPhysicalDevice physicalDevice;
+	vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, &physicalDevice);
+
+	uint32_t numQueueFamilyProperties = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &numQueueFamilyProperties, nullptr);
+	VkQueueFamilyProperties queueFamilyProperties[2];
+	assert(numQueueFamilyProperties == _countof(queueFamilyProperties));
+	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &numQueueFamilyProperties, queueFamilyProperties);
+	assert(queueFamilyProperties[0].queueFlags & VK_QUEUE_GRAPHICS_BIT);
+
+	// this crashes
+//	VkQueue queue = 0;
+//	vkGetDeviceQueue(device, 0, 0, &queue);
+//	assert(!queue);
+
+//	vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, 0, )
+//	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+//	vkQueuePresentKHR(, &presentInfo);
+
+
+	vkDestroyCommandPool(device, commandPool, nullptr);
+	commandPool = 0;
 	vkDestroyFramebuffer(device, framebuffer, nullptr);
+	framebuffer = 0;
 	vkDestroyRenderPass(device, renderPass, nullptr);
+	renderPass = 0;
 	vkDestroySwapchainKHR(device, swapchain, nullptr);
+	swapchain = 0;
 	vkDestroySurfaceKHR(inst, surface, nullptr);
+	surface = 0;
 	vkDestroyDevice(device, nullptr);
+	device = nullptr;
 	vkDestroyInstance(inst, nullptr);
+	inst = nullptr;
 }
