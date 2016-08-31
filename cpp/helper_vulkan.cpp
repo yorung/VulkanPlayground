@@ -22,7 +22,8 @@ void VulkanTest(HWND hWnd)
 	float priorities[] = { 0 };
 	VkDeviceQueueCreateInfo devQueueInfos[] = { { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, 1, 0, priorities } };
 	const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-	VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, _countof(deviceExtensions), deviceExtensions };
+	VkPhysicalDeviceFeatures features = {};
+	VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, _countof(deviceExtensions), deviceExtensions, &features };
 	VkDevice device = nullptr;
 	res = vkCreateDevice(devices[0], &devInfo, nullptr, &device);
 	assert(!res);
