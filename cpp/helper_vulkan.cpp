@@ -58,7 +58,7 @@ void VulkanTest(HWND hWnd)
 	res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
 	assert(!res);
 
-	VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+	VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
 	VkCommandPool commandPool;
 	res = vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool);
 	assert(!res);
@@ -77,6 +77,13 @@ void VulkanTest(HWND hWnd)
 	assert(numQueueFamilyProperties == _countof(queueFamilyProperties));
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &numQueueFamilyProperties, queueFamilyProperties);
 	assert(queueFamilyProperties[0].queueFlags & VK_QUEUE_GRAPHICS_BIT);
+
+	VkPhysicalDeviceFeatures physicalDeviceFeatures;
+	vkGetPhysicalDeviceFeatures(physicalDevice, &physicalDeviceFeatures);
+	VkPhysicalDeviceProperties physicalDeviceProperties;
+	vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
+	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemoryProperties);
 
 	// this crashes
 //	VkQueue queue = 0;
