@@ -70,7 +70,8 @@ void VulkanTest(HWND hWnd)
 
 	assert(numPhysicalDevices == 1);
 	VkPhysicalDevice physicalDevice;
-	vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, &physicalDevice);
+	res = vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, &physicalDevice);
+	assert(!res);
 
 	uint32_t numQueueFamilyProperties = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &numQueueFamilyProperties, nullptr);
@@ -86,10 +87,9 @@ void VulkanTest(HWND hWnd)
 	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemoryProperties);
 
-	// this crashes
-//	VkQueue queue = 0;
-//	vkGetDeviceQueue(device, 0, 0, &queue);
-//	assert(!queue);
+	VkQueue queue = 0;
+	vkGetDeviceQueue(device, 0, 0, &queue);
+	assert(queue);
 
 //	vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, 0, )
 //	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
