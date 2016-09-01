@@ -91,11 +91,21 @@ void VulkanTest(HWND hWnd)
 	vkGetDeviceQueue(device, 0, 0, &queue);
 	assert(queue);
 
+	VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+	VkCommandBuffer commandBuffer;
+	res = vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer);
+	assert(!res);
+
+	VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
+	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, nullptr);
+	assert(!res);
+
 //	vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, 0, )
 //	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 //	vkQueuePresentKHR(, &presentInfo);
 
-
+	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+	commandBuffer = 0;
 	vkDestroyCommandPool(device, commandPool, nullptr);
 	commandPool = 0;
 	vkDestroyFramebuffer(device, framebuffer, nullptr);
