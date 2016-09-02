@@ -100,9 +100,12 @@ void VulkanTest(HWND hWnd)
 	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, nullptr);
 	assert(!res);
 
-//	vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, 0, )
-//	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-//	vkQueuePresentKHR(, &presentInfo);
+	uint32_t imageIndex = 0;
+	res = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, 0, VK_NULL_HANDLE, &imageIndex);
+	assert(!res);
+
+	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 0, nullptr, 1, &swapchain, &imageIndex };
+	vkQueuePresentKHR(queue, &presentInfo);
 
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	commandBuffer = 0;
