@@ -8,8 +8,25 @@
 void VulkanTest(HWND hWnd)
 {
 	VkResult res;
-	const char* extensions[] = { "VK_KHR_surface", "VK_KHR_win32_surface" };
-	VkInstanceCreateInfo instInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0, nullptr, 0, nullptr, _countof(extensions), extensions };
+	const char* extensions[] =
+	{
+		"VK_KHR_surface",
+		"VK_KHR_win32_surface",
+#ifndef NDEBUG
+		"VK_EXT_debug_report",
+#endif
+	};
+	const char* instanceLayers[] =
+	{
+		"VK_LAYER_LUNARG_standard_validation",
+	};
+	VkInstanceCreateInfo instInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0, nullptr,
+#ifndef NDEBUG
+		1,
+#else
+		0,
+#endif
+		instanceLayers, _countof(extensions), extensions };
 	VkInstance inst = nullptr;
 	res = vkCreateInstance(&instInfo, nullptr, &inst);
 	assert(!res);
