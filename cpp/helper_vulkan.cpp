@@ -50,13 +50,29 @@ void VulkanTest(HWND hWnd)
 	res = vkCreateWin32SurfaceKHR(inst, &surfaceInfo, nullptr, &surface);
 	assert(!res);
 
+	uint32_t numSurfaceFormats = 0;
+	VkSurfaceFormatKHR surfaceFormats[32] = {};
+	res = vkGetPhysicalDeviceSurfaceFormatsKHR(devices[0], surface, &numSurfaceFormats, nullptr);
+	assert(!res);
+	assert(numSurfaceFormats <= _countof(surfaceFormats));
+	res = vkGetPhysicalDeviceSurfaceFormatsKHR(devices[0], surface, &numSurfaceFormats, surfaceFormats);
+	assert(!res);
+
+	uint32_t numPresentModes = 0;
+	VkPresentModeKHR presentModes[32] = {};
+	res = vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &numPresentModes, nullptr);
+	assert(!res);
+	assert(numPresentModes <= _countof(presentModes));
+	res = vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &numPresentModes, presentModes);
+	assert(!res);
+
 	VkSurfaceCapabilitiesKHR surfaceCaps = {};
 	res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[0], surface, &surfaceCaps);
 	assert(!res);
 
 	RECT rc;
 	GetClientRect(hWnd, &rc);
-	VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, VK_FORMAT_R8G8B8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, {uint32_t(rc.right - rc.left), uint32_t(rc.bottom - rc.top)} };
+	VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace, { uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
 	VkSwapchainKHR swapchain = 0;
 	res = vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain);
 	assert(!res);
@@ -71,7 +87,7 @@ void VulkanTest(HWND hWnd)
 	res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
 	assert(!res);
 
-	VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+	VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass };
 	VkFramebuffer framebuffer;
 	res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
 	assert(!res);
