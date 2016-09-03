@@ -20,7 +20,7 @@ void VulkanTest(HWND hWnd)
 	{
 		"VK_LAYER_LUNARG_standard_validation",
 	};
-	VkInstanceCreateInfo instInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0, nullptr,
+	const VkInstanceCreateInfo instInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, nullptr, 0, nullptr,
 #ifndef NDEBUG
 		1,
 #else
@@ -37,15 +37,15 @@ void VulkanTest(HWND hWnd)
 	assert(!res);
 
 	float priorities[] = { 0 };
-	VkDeviceQueueCreateInfo devQueueInfos[] = { { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, 0, 1, priorities } };
+	const VkDeviceQueueCreateInfo devQueueInfos[] = { { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, 0, 1, priorities } };
 	const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-	VkPhysicalDeviceFeatures features = {};
-	VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, _countof(deviceExtensions), deviceExtensions, &features };
+	const VkPhysicalDeviceFeatures features = {};
+	const VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, _countof(deviceExtensions), deviceExtensions, &features };
 	VkDevice device = nullptr;
 	res = vkCreateDevice(devices[0], &devInfo, nullptr, &device);
 	assert(!res);
 
-	VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, nullptr, 0, GetModuleHandle(nullptr), hWnd };
+	const VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, nullptr, 0, GetModuleHandle(nullptr), hWnd };
 	VkSurfaceKHR surface = 0;
 	res = vkCreateWin32SurfaceKHR(inst, &surfaceInfo, nullptr, &surface);
 	assert(!res);
@@ -70,24 +70,37 @@ void VulkanTest(HWND hWnd)
 	res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[0], surface, &surfaceCaps);
 	assert(!res);
 
+	VkBool32 physicalDeviceSurfaceSupport = VK_FALSE;
+	res = vkGetPhysicalDeviceSurfaceSupportKHR(devices[0], 0, surface, &physicalDeviceSurfaceSupport);
+	assert(!res);
+	assert(physicalDeviceSurfaceSupport);
+
 	RECT rc;
 	GetClientRect(hWnd, &rc);
-	VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace, { uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
+	const VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace, { uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
 	VkSwapchainKHR swapchain = 0;
 	res = vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain);
 	assert(!res);
 
-	uint32_t swapChainCount = 2;
-	VkImage images[2];
+	uint32_t swapChainCount = 0;
+	VkImage images[8];
+	res = vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr);
+	assert(!res);
+	assert(swapChainCount <= _countof(images));
 	res = vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, images);
 	assert(!res);
 
-	VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
+	const VkAttachmentReference colorAttachmentReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+	const VkSubpassDescription subpassDescriptions[] = { { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &colorAttachmentReference } };
+	const VkAttachmentDescription attachments[1] = { { 0, swapchainInfo.imageFormat, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR } };
+	const VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, _countof(attachments), attachments, _countof(subpassDescriptions), subpassDescriptions };
 	VkRenderPass renderPass;
 	res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
 	assert(!res);
 
-	VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass };
+	VkImageView frameBufferAttachmentImageView[1] = {};
+	assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
+	const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, _countof(frameBufferAttachmentImageView), frameBufferAttachmentImageView };
 	VkFramebuffer framebuffer;
 	res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
 	assert(!res);
