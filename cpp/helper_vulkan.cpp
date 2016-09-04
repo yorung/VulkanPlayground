@@ -160,15 +160,9 @@ void VulkanTest(HWND hWnd)
 	res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 	assert(!res);
 
-	VkClearValue clearValues[2] = {};
-	VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, 2, clearValues };
+	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
+	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
 	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	VkClearColorValue clearColorValue = {};
-	clearColorValue.float32[0] = 0.2f;
-	clearColorValue.float32[1] = 0.5f;
-	clearColorValue.float32[2] = 0.5f;
-	vkCmdClearColorImage(commandBuffer, images[0], VK_IMAGE_LAYOUT_GENERAL, &clearColorValue, 1, &imageViewCreateInfo.subresourceRange);
 
 	vkCmdEndRenderPass(commandBuffer);
 	res = vkEndCommandBuffer(commandBuffer);
