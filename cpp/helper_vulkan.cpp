@@ -105,7 +105,7 @@ void VulkanTest(HWND hWnd)
 
 	const VkImageView frameBufferAttachmentImageView[1] = { { imageView }};
 	assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
-	const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, _countof(frameBufferAttachmentImageView), frameBufferAttachmentImageView };
+	const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, _countof(frameBufferAttachmentImageView), frameBufferAttachmentImageView, (uint32_t)rc.right, (uint32_t)rc.bottom, 1 };
 	VkFramebuffer framebuffer;
 	res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
 	assert(!res);
@@ -142,13 +142,18 @@ void VulkanTest(HWND hWnd)
 	vkGetDeviceQueue(device, 0, 0, &queue);
 	assert(queue);
 
-	VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+	const VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
 	VkCommandBuffer commandBuffer;
 	res = vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer);
 	assert(!res);
 
+	const VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+	VkSemaphore semaphore;
+	res = vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore);
+	assert(!res);
+
 	uint32_t imageIndex = 0;
-	res = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, 0, VK_NULL_HANDLE, &imageIndex);
+	res = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex);
 	assert(!res);
 
 	VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
@@ -157,8 +162,8 @@ void VulkanTest(HWND hWnd)
 
 	VkClearValue clearValues[2] = {};
 	VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, 2, clearValues };
-//	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-//	vkCmdEndRenderPass(commandBuffer);
+	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdEndRenderPass(commandBuffer);
 	res = vkEndCommandBuffer(commandBuffer);
 	assert(!res);
 
@@ -166,11 +171,17 @@ void VulkanTest(HWND hWnd)
 	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, nullptr);
 	assert(!res);
 
-	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 0, nullptr, 1, &swapchain, &imageIndex };
-	vkQueuePresentKHR(queue, &presentInfo);
+	res = vkQueueWaitIdle(queue);
+	assert(!res);
+
+	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
+	res = vkQueuePresentKHR(queue, &presentInfo);
+	assert(!res);
 
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	commandBuffer = 0;
+	vkDestroySemaphore(device, semaphore, nullptr);
+	semaphore = 0;
 	vkDestroyImageView(device, imageView, nullptr);
 	imageView = 0;
 	vkDestroyCommandPool(device, commandPool, nullptr);
