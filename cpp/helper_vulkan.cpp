@@ -110,7 +110,7 @@ void VulkanTest(HWND hWnd)
 	res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
 	assert(!res);
 
-	VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
+	const VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
 	VkCommandPool commandPool;
 	res = vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool);
 	assert(!res);
@@ -156,7 +156,7 @@ void VulkanTest(HWND hWnd)
 	res = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex);
 	assert(!res);
 
-	VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, nullptr };
+	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 	assert(!res);
 
@@ -168,14 +168,14 @@ void VulkanTest(HWND hWnd)
 	res = vkEndCommandBuffer(commandBuffer);
 	assert(!res);
 
-	VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
+	const VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
 	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, 0);
 	assert(!res);
 
 	res = vkQueueWaitIdle(queue);
 	assert(!res);
 
-	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
+	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
 	res = vkQueuePresentKHR(queue, &presentInfo);
 	assert(!res);
 
