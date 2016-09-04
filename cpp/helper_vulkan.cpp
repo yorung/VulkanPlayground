@@ -175,7 +175,7 @@ void VulkanTest(HWND hWnd)
 	assert(!res);
 
 	VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
-	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, nullptr);
+	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, 0);
 	assert(!res);
 
 	res = vkQueueWaitIdle(queue);
