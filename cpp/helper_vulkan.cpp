@@ -98,7 +98,12 @@ void VulkanTest(HWND hWnd)
 	res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
 	assert(!res);
 
-	VkImageView frameBufferAttachmentImageView[1] = {};
+	VkImageView imageView = 0;
+	const VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, images[0], VK_IMAGE_VIEW_TYPE_2D, surfaceFormats[0].format, { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+	res = vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageView);
+	assert(!res);
+
+	const VkImageView frameBufferAttachmentImageView[1] = { { imageView }};
 	assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
 	const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, _countof(frameBufferAttachmentImageView), frameBufferAttachmentImageView };
 	VkFramebuffer framebuffer;
@@ -142,10 +147,6 @@ void VulkanTest(HWND hWnd)
 	res = vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer);
 	assert(!res);
 
-	VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
-	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, nullptr);
-	assert(!res);
-
 	uint32_t imageIndex = 0;
 	res = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, 0, VK_NULL_HANDLE, &imageIndex);
 	assert(!res);
@@ -161,11 +162,17 @@ void VulkanTest(HWND hWnd)
 	res = vkEndCommandBuffer(commandBuffer);
 	assert(!res);
 
+	VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
+	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, nullptr);
+	assert(!res);
+
 	VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 0, nullptr, 1, &swapchain, &imageIndex };
 	vkQueuePresentKHR(queue, &presentInfo);
 
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	commandBuffer = 0;
+	vkDestroyImageView(device, imageView, nullptr);
+	imageView = 0;
 	vkDestroyCommandPool(device, commandPool, nullptr);
 	commandPool = 0;
 	vkDestroyFramebuffer(device, framebuffer, nullptr);
