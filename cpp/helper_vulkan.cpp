@@ -42,7 +42,7 @@ static VkShaderModule CreateShaderModule(VkDevice device, const char* fileName)
 	return module;
 }
 
-static void WriteBuffer(VkDevice device, VkBuffer buffer, VkPhysicalDeviceMemoryProperties memoryProperties, int size, const void* data)
+static void WriteBuffer(VkDevice device, VkBuffer buffer, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* data)
 {
 	VkMemoryRequirements req;
 	vkGetBufferMemoryRequirements(device, buffer, &req);
@@ -227,7 +227,13 @@ void VulkanTest(HWND hWnd)
 	const VkRect2D scissors[] = { { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom } };
 	VkPipeline pipeline = CreatePipeline(device, pipelineLayout, pipelineCache, renderPass, viewports, scissors);
 
-	VkBuffer buffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Vec3) * 3);
+	Vec2 vertexPositions[3];
+	for (int i = 0; i < 3; i++)
+	{
+		vertexPositions[i] = Vec2(sin(i * (float)M_PI * 2 / 3), cos(i * (float)M_PI * 2 / 3));
+	}
+	VkBuffer buffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(vertexPositions));
+	WriteBuffer(device, buffer, physicalDeviceMemoryProperties, sizeof(vertexPositions), vertexPositions);
 
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
 	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
