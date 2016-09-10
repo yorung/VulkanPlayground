@@ -42,6 +42,25 @@ static VkShaderModule CreateShaderModule(VkDevice device, const char* fileName)
 	return module;
 }
 
+static void WriteBuffer(VkDevice device, VkBuffer buffer, VkPhysicalDeviceMemoryProperties memoryProperties, int size, const void* data)
+{
+	VkMemoryRequirements req;
+	vkGetBufferMemoryRequirements(device, buffer, &req);
+	uint32_t memoryTypeIndex = 0;
+
+	VkMemoryAllocateInfo info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, memoryTypeIndex };
+
+//	vkMapMemory(device, );
+}
+
+static VkBuffer CreateBuffer(VkDevice device, VkBufferUsageFlags usage, int size)
+{
+	const VkBufferCreateInfo info = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, (VkDeviceSize)size, usage };
+	VkBuffer buffer;
+	afHandleVKError(vkCreateBuffer(device, &info, nullptr, &buffer));
+	return buffer;
+}
+
 static VkPipeline CreatePipeline(VkDevice device, VkPipelineLayout pipelineLayout, VkPipelineCache pipelineCache, VkRenderPass renderPass, const VkViewport* viewport, const VkRect2D* scissor)
 {
 	VkShaderModule vertexShader = CreateShaderModule(device, "test.vert.spv");
@@ -208,6 +227,8 @@ void VulkanTest(HWND hWnd)
 	const VkRect2D scissors[] = { { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom } };
 	VkPipeline pipeline = CreatePipeline(device, pipelineLayout, pipelineCache, renderPass, viewports, scissors);
 
+	VkBuffer buffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Vec3) * 3);
+
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
 	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
 	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -226,6 +247,7 @@ void VulkanTest(HWND hWnd)
 	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
 	afHandleVKError(vkQueuePresentKHR(queue, &presentInfo));
 
+	afSafeDeleteVk(vkDestroyBuffer, device, buffer);
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
 	afSafeDeleteVk(vkDestroyPipelineCache, device, pipelineCache);
