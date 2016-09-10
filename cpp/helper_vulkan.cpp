@@ -1,9 +1,24 @@
 #include "stdafx.h"
 
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-
 #pragma comment(lib, "vulkan-1.lib")
+
+VkResult _afHandleVKError(const char* file, const char* func, int line, const char* command, VkResult result)
+{
+	const char *err = nullptr;
+	switch (result)
+	{
+#define E(er) case er: err = #er; break
+		E(VK_INCOMPLETE);
+#undef E
+	default:
+		aflog("%s %s(%d): err=%d %s\n", file, func, line, result, command);
+		return result;
+	case VK_SUCCESS:
+		return VK_SUCCESS;
+	}
+	aflog("%s %s(%d): %s %s\n", file, func, line, err, command);
+	return result;
+}
 
 static VkShaderModule CreateShaderModule(VkDevice device, const char* fileName)
 {
@@ -12,15 +27,13 @@ static VkShaderModule CreateShaderModule(VkDevice device, const char* fileName)
 	assert(file);
 	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0, (size_t)size, (uint32_t*)file };
 	VkShaderModule module = 0;
-	VkResult res = vkCreateShaderModule(device, &info, nullptr, &module);
-	assert(!res);
+	afHandleVKError(vkCreateShaderModule(device, &info, nullptr, &module));
 	free(file);
 	return module;
 }
 
 void VulkanTest(HWND hWnd)
 {
-	VkResult res;
 	const char* extensions[] =
 	{
 		"VK_KHR_surface",
@@ -41,13 +54,11 @@ void VulkanTest(HWND hWnd)
 #endif
 		instanceLayers, _countof(extensions), extensions };
 	VkInstance inst = nullptr;
-	res = vkCreateInstance(&instInfo, nullptr, &inst);
-	assert(!res);
+	afHandleVKError(vkCreateInstance(&instInfo, nullptr, &inst));
 
 	VkPhysicalDevice devices[16] = {};
 	uint32_t numDevices = _countof(devices);
-	res = vkEnumeratePhysicalDevices(inst, &numDevices, devices);
-	assert(!res);
+	afHandleVKError(vkEnumeratePhysicalDevices(inst, &numDevices, devices));
 
 	float priorities[] = { 0 };
 	const VkDeviceQueueCreateInfo devQueueInfos[] = { { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, 0, 1, priorities } };
@@ -55,87 +66,70 @@ void VulkanTest(HWND hWnd)
 	const VkPhysicalDeviceFeatures features = {};
 	const VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, _countof(deviceExtensions), deviceExtensions, &features };
 	VkDevice device = nullptr;
-	res = vkCreateDevice(devices[0], &devInfo, nullptr, &device);
-	assert(!res);
+	afHandleVKError(vkCreateDevice(devices[0], &devInfo, nullptr, &device));
 
 	const VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, nullptr, 0, GetModuleHandle(nullptr), hWnd };
 	VkSurfaceKHR surface = 0;
-	res = vkCreateWin32SurfaceKHR(inst, &surfaceInfo, nullptr, &surface);
-	assert(!res);
+	afHandleVKError(vkCreateWin32SurfaceKHR(inst, &surfaceInfo, nullptr, &surface));
 
 	uint32_t numSurfaceFormats = 0;
 	VkSurfaceFormatKHR surfaceFormats[32] = {};
-	res = vkGetPhysicalDeviceSurfaceFormatsKHR(devices[0], surface, &numSurfaceFormats, nullptr);
-	assert(!res);
+	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(devices[0], surface, &numSurfaceFormats, nullptr));
 	assert(numSurfaceFormats <= _countof(surfaceFormats));
-	res = vkGetPhysicalDeviceSurfaceFormatsKHR(devices[0], surface, &numSurfaceFormats, surfaceFormats);
-	assert(!res);
+	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(devices[0], surface, &numSurfaceFormats, surfaceFormats));
 
 	uint32_t numPresentModes = 0;
 	VkPresentModeKHR presentModes[32] = {};
-	res = vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &numPresentModes, nullptr);
-	assert(!res);
+	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &numPresentModes, nullptr));
 	assert(numPresentModes <= _countof(presentModes));
-	res = vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &numPresentModes, presentModes);
-	assert(!res);
+	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &numPresentModes, presentModes));
 
 	VkSurfaceCapabilitiesKHR surfaceCaps = {};
-	res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[0], surface, &surfaceCaps);
-	assert(!res);
+	afHandleVKError(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[0], surface, &surfaceCaps));
 
 	VkBool32 physicalDeviceSurfaceSupport = VK_FALSE;
-	res = vkGetPhysicalDeviceSurfaceSupportKHR(devices[0], 0, surface, &physicalDeviceSurfaceSupport);
-	assert(!res);
+	afHandleVKError(vkGetPhysicalDeviceSurfaceSupportKHR(devices[0], 0, surface, &physicalDeviceSurfaceSupport));
 	assert(physicalDeviceSurfaceSupport);
 
 	RECT rc;
 	GetClientRect(hWnd, &rc);
 	const VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace, { uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
 	VkSwapchainKHR swapchain = 0;
-	res = vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain);
-	assert(!res);
+	afHandleVKError(vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain));
 
 	uint32_t swapChainCount = 0;
 	VkImage images[8];
-	res = vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr);
-	assert(!res);
+	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr));
 	assert(swapChainCount <= _countof(images));
-	res = vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, images);
-	assert(!res);
+	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, images));
 
 	const VkAttachmentReference colorAttachmentReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 	const VkSubpassDescription subpassDescriptions[] = { { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &colorAttachmentReference } };
 	const VkAttachmentDescription attachments[1] = { { 0, swapchainInfo.imageFormat, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR } };
 	const VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, _countof(attachments), attachments, _countof(subpassDescriptions), subpassDescriptions };
 	VkRenderPass renderPass;
-	res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
-	assert(!res);
+	afHandleVKError(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
 
 	VkImageView imageView = 0;
 	const VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, images[0], VK_IMAGE_VIEW_TYPE_2D, surfaceFormats[0].format, { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
-	res = vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageView);
-	assert(!res);
+	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageView));
 
 	const VkImageView frameBufferAttachmentImageView[1] = { { imageView }};
 	assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
 	const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, _countof(frameBufferAttachmentImageView), frameBufferAttachmentImageView, (uint32_t)rc.right, (uint32_t)rc.bottom, 1 };
 	VkFramebuffer framebuffer;
-	res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
-	assert(!res);
+	afHandleVKError(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer));
 
 	const VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
 	VkCommandPool commandPool;
-	res = vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool);
-	assert(!res);
+	afHandleVKError(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool));
 
 	uint32_t numPhysicalDevices = 0;
-	res = vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, nullptr);
-	assert(!res);
+	afHandleVKError(vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, nullptr));
 
 	assert(numPhysicalDevices == 1);
 	VkPhysicalDevice physicalDevice;
-	res = vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, &physicalDevice);
-	assert(!res);
+	afHandleVKError(vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, &physicalDevice));
 
 	uint32_t numQueueFamilyProperties = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &numQueueFamilyProperties, nullptr);
@@ -157,31 +151,25 @@ void VulkanTest(HWND hWnd)
 
 	const VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
 	VkCommandBuffer commandBuffer;
-	res = vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer);
-	assert(!res);
+	afHandleVKError(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer));
 
 	const VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 	VkSemaphore semaphore;
-	res = vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore);
-	assert(!res);
+	afHandleVKError(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
 
 	uint32_t imageIndex = 0;
-	res = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex);
-	assert(!res);
+	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex));
 
 	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
-	assert(!res);
+	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 
 	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 	VkPipelineLayout pipelineLayout = 0;
-	res = vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
-	assert(!res);
+	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
 	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
 	VkPipelineCache pipelineCache = 0;
-	res = vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache);
-	assert(!res);
+	afHandleVKError(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
 
 	VkShaderModule vertexShader = CreateShaderModule(device, "test.vert.spv");
 	VkShaderModule fragmentShader = CreateShaderModule(device, "test.frag.spv");
@@ -200,8 +188,7 @@ void VulkanTest(HWND hWnd)
 	const VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, nullptr, 0, _countof(dynamicStates), dynamicStates };
 	const VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfos[] = { { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0, _countof(shaderStageCreationInfos), shaderStageCreationInfos, &pipelineVertexInputStateCreateInfo, &pipelineInputAssemblyStateCreateInfo, nullptr, &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo, &depthStencilStateCreateInfo, &colorBlendState, &pipelineDynamicStateCreateInfo, pipelineLayout, renderPass } };
 	VkPipeline pipeline = 0;
-	res = vkCreateGraphicsPipelines(device, pipelineCache, _countof(graphicsPipelineCreateInfos), graphicsPipelineCreateInfos, nullptr, &pipeline);
-	assert(!res);
+	afHandleVKError(vkCreateGraphicsPipelines(device, pipelineCache, _countof(graphicsPipelineCreateInfos), graphicsPipelineCreateInfos, nullptr, &pipeline));
 
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
 	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
@@ -211,19 +198,15 @@ void VulkanTest(HWND hWnd)
 	vkCmdSetScissor(commandBuffer, 0, _countof(scissors), scissors);
 	vkCmdDraw(commandBuffer, 4, 1, 0, 0);
 	vkCmdEndRenderPass(commandBuffer);
-	res = vkEndCommandBuffer(commandBuffer);
-	assert(!res);
+	afHandleVKError(vkEndCommandBuffer(commandBuffer));
 
 	const VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
-	res = vkQueueSubmit(queue, _countof(submitInfos), submitInfos, 0);
-	assert(!res);
+	afHandleVKError(vkQueueSubmit(queue, _countof(submitInfos), submitInfos, 0));
 
-	res = vkQueueWaitIdle(queue);
-	assert(!res);
+	afHandleVKError(vkQueueWaitIdle(queue));
 
 	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
-	res = vkQueuePresentKHR(queue, &presentInfo);
-	assert(!res);
+	afHandleVKError(vkQueuePresentKHR(queue, &presentInfo));
 
 	vkDestroyShaderModule(device, vertexShader, nullptr);
 	vertexShader = 0;
