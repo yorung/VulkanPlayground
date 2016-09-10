@@ -20,6 +20,16 @@ VkResult _afHandleVKError(const char* file, const char* func, int line, const ch
 	return result;
 }
 
+template <typename Deleter, class Object>
+inline void afSafeDeleteVk(Deleter deleter, VkDevice device, Object& object)
+{
+	if (object)
+	{
+		deleter(device, object, nullptr);
+		object = 0;
+	}
+}
+
 static VkShaderModule CreateShaderModule(VkDevice device, const char* fileName)
 {
 	int size;
@@ -50,10 +60,8 @@ static VkPipeline CreatePipeline(VkDevice device, VkPipelineLayout pipelineLayou
 	const VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfos[] = { { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0, _countof(shaderStageCreationInfos), shaderStageCreationInfos, &pipelineVertexInputStateCreateInfo, &pipelineInputAssemblyStateCreateInfo, nullptr, &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo, &depthStencilStateCreateInfo, &colorBlendState, &pipelineDynamicStateCreateInfo, pipelineLayout, renderPass } };
 	VkPipeline pipeline = 0;
 	afHandleVKError(vkCreateGraphicsPipelines(device, pipelineCache, _countof(graphicsPipelineCreateInfos), graphicsPipelineCreateInfos, nullptr, &pipeline));
-	vkDestroyShaderModule(device, vertexShader, nullptr);
-	vertexShader = 0;
-	vkDestroyShaderModule(device, fragmentShader, nullptr);
-	fragmentShader = 0;
+	afSafeDeleteVk(vkDestroyShaderModule, device, vertexShader);
+	afSafeDeleteVk(vkDestroyShaderModule, device, fragmentShader);
 	return pipeline;
 }
 
@@ -218,26 +226,17 @@ void VulkanTest(HWND hWnd)
 	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
 	afHandleVKError(vkQueuePresentKHR(queue, &presentInfo));
 
-	vkDestroyPipeline(device, pipeline, nullptr);
-	pipeline = 0;
-	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-	pipelineLayout = 0;
-	vkDestroyPipelineCache(device, pipelineCache, nullptr);
-	pipelineCache = 0;
+	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
+	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
+	afSafeDeleteVk(vkDestroyPipelineCache, device, pipelineCache);
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	commandBuffer = 0;
-	vkDestroySemaphore(device, semaphore, nullptr);
-	semaphore = 0;
-	vkDestroyImageView(device, imageView, nullptr);
-	imageView = 0;
-	vkDestroyCommandPool(device, commandPool, nullptr);
-	commandPool = 0;
-	vkDestroyFramebuffer(device, framebuffer, nullptr);
-	framebuffer = 0;
-	vkDestroyRenderPass(device, renderPass, nullptr);
-	renderPass = 0;
-	vkDestroySwapchainKHR(device, swapchain, nullptr);
-	swapchain = 0;
+	afSafeDeleteVk(vkDestroySemaphore, device, semaphore);
+	afSafeDeleteVk(vkDestroyImageView, device, imageView);
+	afSafeDeleteVk(vkDestroyCommandPool, device, commandPool);
+	afSafeDeleteVk(vkDestroyFramebuffer, device, framebuffer);
+	afSafeDeleteVk(vkDestroyRenderPass, device, renderPass);
+	afSafeDeleteVk(vkDestroySwapchainKHR, device, swapchain);
 	vkDestroySurfaceKHR(inst, surface, nullptr);
 	surface = 0;
 	vkDestroyDevice(device, nullptr);
