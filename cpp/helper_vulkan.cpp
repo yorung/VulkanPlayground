@@ -5,6 +5,19 @@
 
 #pragma comment(lib, "vulkan-1.lib")
 
+static VkShaderModule CreateShaderModule(VkDevice device, const char* fileName)
+{
+	int size;
+	void* file = LoadFile(fileName, &size);
+	assert(file);
+	VkShaderModuleCreateInfo info = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, nullptr, 0, (size_t)size, (uint32_t*)file };
+	VkShaderModule module = 0;
+	VkResult res = vkCreateShaderModule(device, &info, nullptr, &module);
+	assert(!res);
+	free(file);
+	return module;
+}
+
 void VulkanTest(HWND hWnd)
 {
 	VkResult res;
@@ -170,6 +183,9 @@ void VulkanTest(HWND hWnd)
 	res = vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache);
 	assert(!res);
 
+	VkShaderModule vertexShader = CreateShaderModule(device, "test.vert.spv");
+	VkShaderModule fragmentShader = CreateShaderModule(device, "test.frag.spv");
+	const VkPipelineShaderStageCreateInfo shaderStageCreationInfos[] = { { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, vertexShader, "main" },{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, "main" } };
 	const VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 	const VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
 	const VkViewport viewports[] = { { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 } };
@@ -180,10 +196,11 @@ void VulkanTest(HWND hWnd)
 	const VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
 	const VkPipelineColorBlendAttachmentState colorBlendAttachmentStates[] = { { VK_FALSE, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, 0xf } };
 	const VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0, VK_FALSE, VK_LOGIC_OP_CLEAR, _countof(colorBlendAttachmentStates), colorBlendAttachmentStates };
-	const VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-	const VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfos[] = { { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0, 0, nullptr, &pipelineVertexInputStateCreateInfo, &pipelineInputAssemblyStateCreateInfo, nullptr, &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo, &depthStencilStateCreateInfo, &colorBlendState, &pipelineDynamicStateCreateInfo, pipelineLayout, renderPass } };
+	const VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT };
+	const VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, nullptr, 0, _countof(dynamicStates), dynamicStates };
+	const VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfos[] = { { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0, _countof(shaderStageCreationInfos), shaderStageCreationInfos, &pipelineVertexInputStateCreateInfo, &pipelineInputAssemblyStateCreateInfo, nullptr, &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo, &depthStencilStateCreateInfo, &colorBlendState, &pipelineDynamicStateCreateInfo, pipelineLayout, renderPass } };
 	VkPipeline pipeline = 0;
-//	res = vkCreateGraphicsPipelines(device, pipelineCache, _countof(graphicsPipelineCreateInfos), graphicsPipelineCreateInfos, nullptr, &pipeline);
+	res = vkCreateGraphicsPipelines(device, pipelineCache, _countof(graphicsPipelineCreateInfos), graphicsPipelineCreateInfos, nullptr, &pipeline);
 	assert(!res);
 
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
@@ -205,7 +222,11 @@ void VulkanTest(HWND hWnd)
 	res = vkQueuePresentKHR(queue, &presentInfo);
 	assert(!res);
 
-//	vkDestroyPipeline(device, pipeline, nullptr);
+	vkDestroyShaderModule(device, vertexShader, nullptr);
+	vertexShader = 0;
+	vkDestroyShaderModule(device, fragmentShader, nullptr);
+	fragmentShader = 0;
+	vkDestroyPipeline(device, pipeline, nullptr);
 	pipeline = 0;
 	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 	pipelineLayout = 0;

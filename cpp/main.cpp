@@ -39,14 +39,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VULKANPLAYGROUND));
-
-    MSG msg;
-
+	GoMyDir();
 	VulkanTest(hWnd);
 
     // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VULKANPLAYGROUND));
+	MSG msg;
+	while (GetMessage(&msg, nullptr, 0, 0))
     {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
         {

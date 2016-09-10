@@ -5,15 +5,23 @@
 
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-// Windows Header Files:
+#define NOMINMAX
+#define _USE_MATH_DEFINES
 #include <windows.h>
 
-// C RunTime Header Files
+#include <algorithm>
+#include <cmath>
+
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
 
+#include "af_math.h"
+#include "helper.h"
+#include "helper_win.h"
+#include "helper_text.h"
 #include "helper_vulkan.h"
