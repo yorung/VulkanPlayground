@@ -42,21 +42,37 @@ static VkShaderModule CreateShaderModule(VkDevice device, const char* fileName)
 	return module;
 }
 
-static void WriteBuffer(VkDevice device, VkBuffer buffer, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* data)
+static uint32_t GetCompatibleMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& memoryProperties, uint32_t typeBits, VkMemoryPropertyFlags propertyFlags)
+{
+	for (uint32_t i = 0; i < (int)memoryProperties.memoryTypeCount; i++)
+	{
+		if ((typeBits & (1 << i)) && (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags)
+		{
+			return i;
+		}
+	}
+	assert(0);
+	return -1;	// dummy
+}
+
+static void WriteBuffer(VkDevice device, VkBuffer buffer, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData)
 {
 	VkMemoryRequirements req;
 	vkGetBufferMemoryRequirements(device, buffer, &req);
-	uint32_t memoryTypeIndex = 0;
-
-	VkMemoryAllocateInfo info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, memoryTypeIndex };
-
-//	vkMapMemory(device, );
+	const VkMemoryAllocateInfo info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(memoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
+	VkDeviceMemory memory = 0;
+	afHandleVKError(vkAllocateMemory(device, &info, nullptr, &memory));
+	void* mappedMemory = nullptr;
+	afHandleVKError(vkMapMemory(device, memory, 0, size, 0, &mappedMemory));
+	memcpy(mappedMemory, srcData, size);
+	vkUnmapMemory(device, memory);
+	afSafeDeleteVk(vkFreeMemory, device, memory);
 }
 
 static VkBuffer CreateBuffer(VkDevice device, VkBufferUsageFlags usage, int size)
 {
 	const VkBufferCreateInfo info = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, (VkDeviceSize)size, usage };
-	VkBuffer buffer;
+	VkBuffer buffer = 0;
 	afHandleVKError(vkCreateBuffer(device, &info, nullptr, &buffer));
 	return buffer;
 }
