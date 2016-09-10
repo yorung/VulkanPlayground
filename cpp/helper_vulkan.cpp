@@ -160,6 +160,32 @@ void VulkanTest(HWND hWnd)
 	res = vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 	assert(!res);
 
+	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	VkPipelineLayout pipelineLayout = 0;
+	res = vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout);
+	assert(!res);
+
+	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+	VkPipelineCache pipelineCache = 0;
+	res = vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache);
+	assert(!res);
+
+	const VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+	const VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
+	const VkViewport viewports[] = { { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 } };
+	const VkRect2D scissors[] = { { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom } };
+	const VkPipelineViewportStateCreateInfo viewportStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0, _countof(viewports), viewports, _countof(scissors), scissors };
+	const VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+	const VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO, nullptr, 0, VK_SAMPLE_COUNT_1_BIT };
+	const VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+	const VkPipelineColorBlendAttachmentState colorBlendAttachmentStates[] = { { VK_FALSE, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, 0xf } };
+	const VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0, VK_FALSE, VK_LOGIC_OP_CLEAR, _countof(colorBlendAttachmentStates), colorBlendAttachmentStates };
+	const VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+	const VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfos[] = { { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0, 0, nullptr, &pipelineVertexInputStateCreateInfo, &pipelineInputAssemblyStateCreateInfo, nullptr, &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo, &depthStencilStateCreateInfo, &colorBlendState, &pipelineDynamicStateCreateInfo, pipelineLayout, renderPass } };
+	VkPipeline pipeline = 0;
+//	res = vkCreateGraphicsPipelines(device, pipelineCache, _countof(graphicsPipelineCreateInfos), graphicsPipelineCreateInfos, nullptr, &pipeline);
+	assert(!res);
+
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
 	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
 	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -179,6 +205,12 @@ void VulkanTest(HWND hWnd)
 	res = vkQueuePresentKHR(queue, &presentInfo);
 	assert(!res);
 
+//	vkDestroyPipeline(device, pipeline, nullptr);
+	pipeline = 0;
+	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+	pipelineLayout = 0;
+	vkDestroyPipelineCache(device, pipelineCache, nullptr);
+	pipelineCache = 0;
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	commandBuffer = 0;
 	vkDestroySemaphore(device, semaphore, nullptr);
