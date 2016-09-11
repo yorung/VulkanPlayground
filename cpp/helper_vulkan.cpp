@@ -55,34 +55,55 @@ static uint32_t GetCompatibleMemoryTypeIndex(const VkPhysicalDeviceMemoryPropert
 	return -1;	// dummy
 }
 
-static void WriteBuffer(VkDevice device, VkBuffer buffer, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData)
+struct BufferContext
 {
-	VkMemoryRequirements req;
-	vkGetBufferMemoryRequirements(device, buffer, &req);
-	const VkMemoryAllocateInfo info = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(memoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
+	VkDevice device = 0;
+	VkBuffer buffer = 0;
 	VkDeviceMemory memory = 0;
-	afHandleVKError(vkAllocateMemory(device, &info, nullptr, &memory));
-	void* mappedMemory = nullptr;
-	afHandleVKError(vkMapMemory(device, memory, 0, size, 0, &mappedMemory));
-	memcpy(mappedMemory, srcData, size);
-	vkUnmapMemory(device, memory);
-	afSafeDeleteVk(vkFreeMemory, device, memory);
+};
+
+static void DeleteBufer(BufferContext& buffer)
+{
+	afSafeDeleteVk(vkDestroyBuffer, buffer.device, buffer.buffer);
+	afSafeDeleteVk(vkFreeMemory, buffer.device, buffer.memory);
 }
 
-static VkBuffer CreateBuffer(VkDevice device, VkBufferUsageFlags usage, int size)
+static void WriteBuffer(BufferContext& buffer, int size, const void* srcData)
 {
-	const VkBufferCreateInfo info = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, (VkDeviceSize)size, usage };
-	VkBuffer buffer = 0;
-	afHandleVKError(vkCreateBuffer(device, &info, nullptr, &buffer));
+	void* mappedMemory = nullptr;
+	afHandleVKError(vkMapMemory(buffer.device, buffer.memory, 0, size, 0, &mappedMemory));
+	memcpy(mappedMemory, srcData, size);
+	vkUnmapMemory(buffer.device, buffer.memory);
+}
+
+static BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData)
+{
+	const VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, (VkDeviceSize)size, usage };
+	BufferContext buffer;
+	buffer.device = device;
+	afHandleVKError(vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer.buffer));
+
+	VkMemoryRequirements req = {};
+	vkGetBufferMemoryRequirements(device, buffer.buffer, &req);
+	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(memoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
+	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &buffer.memory));
+
+	WriteBuffer(buffer, size, srcData);
+
+	afHandleVKError(vkBindBufferMemory(device, buffer.buffer, buffer.memory, 0));
+
 	return buffer;
 }
+
+static VkVertexInputBindingDescription bindings[] = { { 0, sizeof(Vec2), VK_VERTEX_INPUT_RATE_VERTEX } };
+static VkVertexInputAttributeDescription attributes[] = { { 0, 0, VK_FORMAT_R32G32_SFLOAT, 0 } };
 
 static VkPipeline CreatePipeline(VkDevice device, VkPipelineLayout pipelineLayout, VkPipelineCache pipelineCache, VkRenderPass renderPass, const VkViewport* viewport, const VkRect2D* scissor)
 {
 	VkShaderModule vertexShader = CreateShaderModule(device, "test.vert.spv");
 	VkShaderModule fragmentShader = CreateShaderModule(device, "test.frag.spv");
 	const VkPipelineShaderStageCreateInfo shaderStageCreationInfos[] = { { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, vertexShader, "main" },{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, "main" } };
-	const VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+	const VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0, _countof(bindings), bindings, _countof(attributes), attributes };
 	const VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP };
 	const VkPipelineViewportStateCreateInfo viewportStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0, 1, viewport, 1, scissor };
 	const VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, nullptr, 0, VK_FALSE, VK_FALSE, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 1.0f };
@@ -248,8 +269,7 @@ void VulkanTest(HWND hWnd)
 	{
 		vertexPositions[i] = Vec2(sin(i * (float)M_PI * 2 / 3), cos(i * (float)M_PI * 2 / 3));
 	}
-	VkBuffer buffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(vertexPositions));
-	WriteBuffer(device, buffer, physicalDeviceMemoryProperties, sizeof(vertexPositions), vertexPositions);
+	BufferContext vertexBuffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, physicalDeviceMemoryProperties, sizeof(vertexPositions), vertexPositions);
 
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
 	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
@@ -257,6 +277,8 @@ void VulkanTest(HWND hWnd)
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	vkCmdSetViewport(commandBuffer, 0, _countof(viewports), viewports);
 	vkCmdSetScissor(commandBuffer, 0, _countof(scissors), scissors);
+	VkDeviceSize offsets[1] = {};
+	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
 	vkCmdDraw(commandBuffer, 4, 1, 0, 0);
 	vkCmdEndRenderPass(commandBuffer);
 	afHandleVKError(vkEndCommandBuffer(commandBuffer));
@@ -269,7 +291,7 @@ void VulkanTest(HWND hWnd)
 	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
 	afHandleVKError(vkQueuePresentKHR(queue, &presentInfo));
 
-	afSafeDeleteVk(vkDestroyBuffer, device, buffer);
+	DeleteBufer(vertexBuffer);
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
 	afSafeDeleteVk(vkDestroyPipelineCache, device, pipelineCache);
