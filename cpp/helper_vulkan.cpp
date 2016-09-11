@@ -73,10 +73,14 @@ BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPh
 	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(memoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
 	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &buffer.memory));
 
-	WriteBuffer(buffer, size, srcData);
+	if (srcData)
+	{
+		WriteBuffer(buffer, size, srcData);
+	}
 
 	afHandleVKError(vkBindBufferMemory(device, buffer.buffer, buffer.memory, 0));
 
+	buffer.size = size;
 	return buffer;
 }
 

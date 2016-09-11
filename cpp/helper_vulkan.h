@@ -19,6 +19,7 @@ struct BufferContext
 	VkDevice device = 0;
 	VkBuffer buffer = 0;
 	VkDeviceMemory memory = 0;
+	VkDeviceSize size = 0;
 };
 
 void DeleteBufer(BufferContext& buffer);
