@@ -2,31 +2,7 @@
 
 #pragma comment(lib, "vulkan-1.lib")
 
-class DeviceManVK
-{
-	VkDevice device = nullptr;
-	VkInstance inst = nullptr;
-	VkSurfaceKHR surface = 0;
-	VkSwapchainKHR swapchain = 0;
-	uint32_t swapChainCount = 0;
-	VkImage swapChainImages[8] = {};
-	VkImageView imageViews[8] = {};
-	VkFramebuffer framebuffers[8] = {};
-	VkCommandBuffer commandBuffer = 0;
-	VkSemaphore semaphore = 0;
-	VkCommandPool commandPool = 0;
-	VkRenderPass renderPass = 0;
-	VkPipelineCache pipelineCache = 0;
-	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
-	uint32_t frameIndex = 0;
-	RECT rc = {};
-	void BeginScene();
-public:
-	void Create(HWND hWnd);
-	void Test();
-	void Present();
-	void Destroy();
-} deviceMan;
+DeviceManVK deviceMan;
 
 VkResult _afHandleVKError(const char* file, const char* func, int line, const char* command, VkResult result)
 {
@@ -330,8 +306,11 @@ void DeviceManVK::Present()
 void DeviceManVK::Destroy()
 {
 	afSafeDeleteVk(vkDestroyPipelineCache, device, pipelineCache);
-	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
-	commandBuffer = 0;
+	if (commandBuffer)
+	{
+		vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+		commandBuffer = 0;
+	}
 	afSafeDeleteVk(vkDestroySemaphore, device, semaphore);
 	for (auto& it : imageViews)
 	{
@@ -341,20 +320,19 @@ void DeviceManVK::Destroy()
 	std::for_each(framebuffers, framebuffers + _countof(framebuffers), [&](VkFramebuffer& framebuffer) { afSafeDeleteVk(vkDestroyFramebuffer, device, framebuffer);	});
 	afSafeDeleteVk(vkDestroyRenderPass, device, renderPass);
 	afSafeDeleteVk(vkDestroySwapchainKHR, device, swapchain);
-	vkDestroySurfaceKHR(inst, surface, nullptr);
-	surface = 0;
-	vkDestroyDevice(device, nullptr);
-	device = nullptr;
-	vkDestroyInstance(inst, nullptr);
-	inst = nullptr;
-}
-
-void VulkanTest(HWND hWnd)
-{
-	deviceMan.Create(hWnd);
-	deviceMan.Test();
-	deviceMan.Test();
-	deviceMan.Test();
-	deviceMan.Test();
-	deviceMan.Destroy();
+	if (surface)
+	{
+		vkDestroySurfaceKHR(inst, surface, nullptr);
+		surface = 0;
+	}
+	if (device)
+	{
+		vkDestroyDevice(device, nullptr);
+		device = nullptr;
+	}
+	if (inst)
+	{
+		vkDestroyInstance(inst, nullptr);
+		inst = nullptr;
+	}
 }

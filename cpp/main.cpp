@@ -1,6 +1,3 @@
-// VulkanPlayground.cpp : Defines the entry point for the application.
-//
-
 #include "stdafx.h"
 #include "../VisualStudio/resource.h"
 
@@ -8,56 +5,74 @@
 
 // Global Variables:
 HWND hWnd;
-HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+HINSTANCE hInst;								// current instance
+TCHAR szTitle[MAX_LOADSTRING];					// The title bar text
+TCHAR szWindowClass[MAX_LOADSTRING];			// the main window class name
+HACCEL hAccelTable;
+
+
 
 // Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+ATOM				MyRegisterClass(HINSTANCE hInstance);
+BOOL				InitInstance(HINSTANCE);
+LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+
+#ifdef _DEBUG
+int main(int, char**)
+#else
+int APIENTRY wWinMain(_In_ HINSTANCE,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPTSTR    lpCmdLine,
+	_In_ int)
+#endif
+
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	HINSTANCE hInstance = GetModuleHandle(nullptr);
 
-    // TODO: Place code here.
+	// Initialize global strings
+	LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	LoadString(hInstance, IDC_VULKANPLAYGROUND, szWindowClass, MAX_LOADSTRING);
+	MyRegisterClass(hInstance);
 
-    // Initialize global strings
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_VULKANPLAYGROUND, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+	// Perform application initialization:
+	if (!InitInstance(hInstance))
+	{
+		return FALSE;
+	}
 
-    // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
-    {
-        return FALSE;
-    }
+	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VULKANPLAYGROUND));
 
-	GoMyDir();
-	VulkanTest(hWnd);
 
-    // Main message loop:
-	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_VULKANPLAYGROUND));
-	MSG msg;
-	while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
+	int lastW = 0;
+	int lastH = 0;
 
-    return (int) msg.wParam;
+	// Main message loop:
+	while (ProcessWindowMessage(hWnd, hAccelTable))
+	{
+		RECT rc;
+		GetClientRect(hWnd, &rc);
+		int w = rc.right - rc.left;
+		int h = rc.bottom - rc.top;
+		if (w != lastW || h != lastH)
+		{
+			lastW = w;
+			lastH = h;
+			//	app.Destroy();
+			deviceMan.Destroy();
+			deviceMan.Create(hWnd);
+			//	app.Init();
+			GoMyDir();
+		}
+		deviceMan.Test();
+		//app.Update();
+		//app.Draw();
+		//		deviceMan.Present();
+		Sleep(1);
+	}
+	return 0;
 }
-
-
 
 //
 //  FUNCTION: MyRegisterClass()
@@ -66,20 +81,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
-    WNDCLASSW wcex;
+	WNDCLASS wcex;
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_VULKANPLAYGROUND));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_VULKANPLAYGROUND);
-    wcex.lpszClassName  = szWindowClass;
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_VULKANPLAYGROUND));
+	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = MAKEINTRESOURCE(IDC_VULKANPLAYGROUND);
+	wcex.lpszClassName = szWindowClass;
 
-    return RegisterClassW(&wcex);
+	return RegisterClass(&wcex);
 }
 
 //
@@ -92,22 +107,21 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //        In this function, we save the instance handle in a global variable and
 //        create and display the main program window.
 //
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+BOOL InitInstance(HINSTANCE hInstance)
 {
-   hInst = hInstance; // Store instance handle in our global variable
+	hInst = hInstance; // Store instance handle in our global variable
 
-   hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+	hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, hInstance, NULL);
 
-   if (!hWnd)
-   {
-      return FALSE;
-   }
+	if (!hWnd)
+	{
+		return FALSE;
+	}
+	ShowWindow(hWnd, SW_SHOWNORMAL);
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
+	DragAcceptFiles(hWnd, TRUE);
+	return TRUE;
 }
 
 //
@@ -115,65 +129,101 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //  PURPOSE:  Processes messages for the main window.
 //
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
+//  WM_COMMAND	- process the application menu
+//  WM_PAINT	- Paint the main window
+//  WM_DESTROY	- post a quit message and return
 //
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    switch (message)
-    {
-    case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            // Parse the menu selections:
-            switch (wmId)
-            {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-        }
-        break;
-    case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
-        }
-        break;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
+	int wmId, wmEvent;
+	PAINTSTRUCT ps;
+	HDC hdc;
+
+	//	IVec2 screenSize = systemMisc.GetScreenSize();
+	switch (message)
+	{
+	case WM_COMMAND:
+		wmId = LOWORD(wParam);
+		wmEvent = HIWORD(wParam);
+
+		// Parse the menu selections:
+		switch (wmId)
+		{
+		case IDM_ABOUT:
+			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+			break;
+		case IDM_EXIT:
+			SendMessage(hWnd, WM_CLOSE, 0, 0);
+			break;
+		default:
+			return DefWindowProc(hWnd, message, wParam, lParam);
+		}
+		break;
+	case WM_PAINT:
+		hdc = BeginPaint(hWnd, &ps);
+		// TODO: Add any drawing code here...
+		EndPaint(hWnd, &ps);
+		break;
+	case WM_CLOSE:
+		//	app.Destroy();
+		deviceMan.Destroy();
+		DestroyWindow(hWnd);
+		return 0;
+	case WM_DROPFILES:
+	{
+		HDROP hDrop = (HDROP)wParam;
+		char fileName[MAX_PATH];
+		DragQueryFileA(hDrop, 0, fileName, MAX_PATH);
+		DragFinish(hDrop);
+		//		app.LoadMesh(fileName);
+		break;
+	}
+	case WM_LBUTTONDOWN:
+		SetCapture(hWnd);
+		//	devCamera.LButtonDown(LOWORD(lParam) / (float)screenSize.x, HIWORD(lParam) / (float)screenSize.y);
+		//	systemMisc.mouseDown = true;
+		break;
+	case WM_LBUTTONUP:
+		ReleaseCapture();
+		//	devCamera.LButtonUp(LOWORD(lParam) / (float)screenSize.x, HIWORD(lParam) / (float)screenSize.y);
+		//	systemMisc.mouseDown = false;
+		break;
+	case WM_MOUSEMOVE:
+		//	systemMisc.SetMousePos(IVec2(MAKEPOINTS(lParam).x, MAKEPOINTS(lParam).y));
+		//	devCamera.MouseMove(MAKEPOINTS(lParam).x / (float)screenSize.x, MAKEPOINTS(lParam).y / (float)screenSize.y);
+		break;
+	case WM_MOUSEWHEEL:
+		//	devCamera.MouseWheel((short)HIWORD(wParam) / (float)WHEEL_DELTA);
+		break;
+	case WM_SIZE:
+		//	systemMisc.SetScreenSize(IVec2(LOWORD(lParam), HIWORD(lParam)));
+		break;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
+	return 0;
 }
 
 // Message handler for about box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		return (INT_PTR)TRUE;
 
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
 }
