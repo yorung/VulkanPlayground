@@ -48,6 +48,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE,
 	int lastW = 0;
 	int lastH = 0;
 
+	GoMyDir();
+
 	// Main message loop:
 	while (ProcessWindowMessage(hWnd, hAccelTable))
 	{
@@ -60,15 +62,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE,
 			lastW = w;
 			lastH = h;
 			//	app.Destroy();
+			triangle.Destroy();
 			deviceMan.Destroy();
 			deviceMan.Create(hWnd);
+			triangle.Create();
 			//	app.Init();
-			GoMyDir();
 		}
-		deviceMan.Test();
+		triangle.Draw();
+		//deviceMan.Test();
 		//app.Update();
 		//app.Draw();
-		//		deviceMan.Present();
+		deviceMan.Present();
 		Sleep(1);
 	}
 	return 0;

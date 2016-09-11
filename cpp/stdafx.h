@@ -25,3 +25,4 @@
 #include "helper_win.h"
 #include "helper_text.h"
 #include "helper_vulkan.h"
+#include "triangle.h"

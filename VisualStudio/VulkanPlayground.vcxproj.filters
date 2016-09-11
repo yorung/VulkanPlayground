@@ -36,6 +36,9 @@
     <ClInclude Include="..\cpp\helper.h">
       <Filter>cpp</Filter>
     </ClInclude>
+    <ClInclude Include="..\cpp\triangle.h">
+      <Filter>cpp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\cpp\helper_vulkan.cpp">
@@ -51,6 +54,9 @@
       <Filter>cpp</Filter>
     </ClCompile>
     <ClCompile Include="..\cpp\helper.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cpp\triangle.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
   </ItemGroup>

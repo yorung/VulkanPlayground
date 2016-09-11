@@ -22,16 +22,6 @@ VkResult _afHandleVKError(const char* file, const char* func, int line, const ch
 	return result;
 }
 
-template <typename Deleter, class Object>
-inline void afSafeDeleteVk(Deleter deleter, VkDevice device, Object& object)
-{
-	if (object)
-	{
-		deleter(device, object, nullptr);
-		object = 0;
-	}
-}
-
 static VkShaderModule CreateShaderModule(VkDevice device, const char* fileName)
 {
 	int size;
@@ -57,20 +47,13 @@ static uint32_t GetCompatibleMemoryTypeIndex(const VkPhysicalDeviceMemoryPropert
 	return -1;	// dummy
 }
 
-struct BufferContext
-{
-	VkDevice device = 0;
-	VkBuffer buffer = 0;
-	VkDeviceMemory memory = 0;
-};
-
-static void DeleteBufer(BufferContext& buffer)
+void DeleteBufer(BufferContext& buffer)
 {
 	afSafeDeleteVk(vkDestroyBuffer, buffer.device, buffer.buffer);
 	afSafeDeleteVk(vkFreeMemory, buffer.device, buffer.memory);
 }
 
-static void WriteBuffer(BufferContext& buffer, int size, const void* srcData)
+void WriteBuffer(BufferContext& buffer, int size, const void* srcData)
 {
 	void* mappedMemory = nullptr;
 	afHandleVKError(vkMapMemory(buffer.device, buffer.memory, 0, size, 0, &mappedMemory));
@@ -78,7 +61,7 @@ static void WriteBuffer(BufferContext& buffer, int size, const void* srcData)
 	vkUnmapMemory(buffer.device, buffer.memory);
 }
 
-static BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData)
+BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData)
 {
 	const VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, (VkDeviceSize)size, usage };
 	BufferContext buffer;
@@ -97,10 +80,7 @@ static BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, con
 	return buffer;
 }
 
-static VkVertexInputBindingDescription bindings[] = { { 0, sizeof(Vec2), VK_VERTEX_INPUT_RATE_VERTEX } };
-static VkVertexInputAttributeDescription attributes[] = { { 0, 0, VK_FORMAT_R32G32_SFLOAT, 0 } };
-
-VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipelineLayout)
+VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numBindings, const VkVertexInputBindingDescription bindings[], uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[])
 {
 	char path[MAX_PATH];
 	sprintf_s(path, sizeof(path), "%s.vert.spv", name);
@@ -108,7 +88,7 @@ VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipeli
 	sprintf_s(path, sizeof(path), "%s.frag.spv", name);
 	VkShaderModule fragmentShader = CreateShaderModule(device, path);
 	const VkPipelineShaderStageCreateInfo shaderStageCreationInfos[] = { { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, vertexShader, "main" },{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, "main" } };
-	const VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0, _countof(bindings), bindings, _countof(attributes), attributes };
+	const VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0, numBindings, bindings, numAttributes, attributes };
 	const VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP };
 	const VkPipelineViewportStateCreateInfo viewportStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0, 1, &viewport, 1, &scissor };
 	const VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, nullptr, 0, VK_FALSE, VK_FALSE, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 1.0f };
@@ -247,36 +227,6 @@ void DeviceManVK::Create(HWND hWnd)
 	BeginScene();
 }
 
-void DeviceManVK::Test()
-{
-	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	VkPipelineLayout pipelineLayout = 0;
-	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
-
-	VkPipeline pipeline = CreatePipeline("test", pipelineLayout);
-
-	Vec2 vertexPositions[3];
-	for (int i = 0; i < 3; i++)
-	{
-		vertexPositions[i] = Vec2(sin(i * (float)M_PI * 2 / 3), cos(i * (float)M_PI * 2 / 3));
-	}
-	BufferContext vertexBuffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, physicalDeviceMemoryProperties, sizeof(vertexPositions), vertexPositions);
-
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-	VkDeviceSize offsets[1] = {};
-	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
-	vkCmdDraw(commandBuffer, 4, 1, 0, 0);
-
-	Present();
-
-	DeleteBufer(vertexBuffer);
-
-	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
-	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
-}
-
 void DeviceManVK::BeginScene()
 {
 	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &frameIndex));
@@ -287,6 +237,9 @@ void DeviceManVK::BeginScene()
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
 	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffers[frameIndex],{ {},{ (uint32_t)rc.right, (uint32_t)rc.bottom } }, arrayparam(clearValues) };
 	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
 void DeviceManVK::Present()
