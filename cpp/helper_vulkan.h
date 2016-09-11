@@ -22,11 +22,14 @@ class DeviceManVK
 	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 	uint32_t frameIndex = 0;
 	RECT rc = {};
+	VkViewport viewport;
+	VkRect2D scissor;
 	void BeginScene();
 public:
 	void Create(HWND hWnd);
 	void Test();
 	void Present();
 	void Destroy();
+	VkPipeline CreatePipeline(const char* name, VkPipelineLayout pipelineLayout);
 };
 extern DeviceManVK deviceMan;

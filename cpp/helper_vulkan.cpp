@@ -100,14 +100,17 @@ static BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, con
 static VkVertexInputBindingDescription bindings[] = { { 0, sizeof(Vec2), VK_VERTEX_INPUT_RATE_VERTEX } };
 static VkVertexInputAttributeDescription attributes[] = { { 0, 0, VK_FORMAT_R32G32_SFLOAT, 0 } };
 
-static VkPipeline CreatePipeline(VkDevice device, VkPipelineLayout pipelineLayout, VkPipelineCache pipelineCache, VkRenderPass renderPass, const VkViewport* viewport, const VkRect2D* scissor)
+VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipelineLayout)
 {
-	VkShaderModule vertexShader = CreateShaderModule(device, "test.vert.spv");
-	VkShaderModule fragmentShader = CreateShaderModule(device, "test.frag.spv");
+	char path[MAX_PATH];
+	sprintf_s(path, sizeof(path), "%s.vert.spv", name);
+	VkShaderModule vertexShader = CreateShaderModule(device, path);
+	sprintf_s(path, sizeof(path), "%s.frag.spv", name);
+	VkShaderModule fragmentShader = CreateShaderModule(device, path);
 	const VkPipelineShaderStageCreateInfo shaderStageCreationInfos[] = { { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, vertexShader, "main" },{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, "main" } };
 	const VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0, _countof(bindings), bindings, _countof(attributes), attributes };
 	const VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP };
-	const VkPipelineViewportStateCreateInfo viewportStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0, 1, viewport, 1, scissor };
+	const VkPipelineViewportStateCreateInfo viewportStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0, 1, &viewport, 1, &scissor };
 	const VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, nullptr, 0, VK_FALSE, VK_FALSE, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 1.0f };
 	const VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO, nullptr, 0, VK_SAMPLE_COUNT_1_BIT };
 	const VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
@@ -238,21 +241,19 @@ void DeviceManVK::Create(HWND hWnd)
 	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
 	afHandleVKError(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
 
+	viewport = { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 };
+	scissor = { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom };
+
 	BeginScene();
 }
 
 void DeviceManVK::Test()
 {
-	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
-
 	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 	VkPipelineLayout pipelineLayout = 0;
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
-	const VkViewport viewports[] = { { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 } };
-	const VkRect2D scissors[] = { { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom } };
-	VkPipeline pipeline = CreatePipeline(device, pipelineLayout, pipelineCache, renderPass, viewports, scissors);
+	VkPipeline pipeline = CreatePipeline("test", pipelineLayout);
 
 	Vec2 vertexPositions[3];
 	for (int i = 0; i < 3; i++)
@@ -261,17 +262,12 @@ void DeviceManVK::Test()
 	}
 	BufferContext vertexBuffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, physicalDeviceMemoryProperties, sizeof(vertexPositions), vertexPositions);
 
-	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
-	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffers[frameIndex], { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
-	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-	vkCmdSetViewport(commandBuffer, 0, _countof(viewports), viewports);
-	vkCmdSetScissor(commandBuffer, 0, _countof(scissors), scissors);
+	vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+	vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 	VkDeviceSize offsets[1] = {};
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
 	vkCmdDraw(commandBuffer, 4, 1, 0, 0);
-	vkCmdEndRenderPass(commandBuffer);
-	afHandleVKError(vkEndCommandBuffer(commandBuffer));
 
 	Present();
 
@@ -284,10 +280,20 @@ void DeviceManVK::Test()
 void DeviceManVK::BeginScene()
 {
 	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &frameIndex));
+
+	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+
+	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
+	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffers[frameIndex],{ {},{ (uint32_t)rc.right, (uint32_t)rc.bottom } }, _countof(clearValues), clearValues };
+	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void DeviceManVK::Present()
 {
+	vkCmdEndRenderPass(commandBuffer);
+	afHandleVKError(vkEndCommandBuffer(commandBuffer));
+
 	VkQueue queue = 0;
 	vkGetDeviceQueue(device, 0, 0, &queue);
 	assert(queue);
