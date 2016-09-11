@@ -10,15 +10,17 @@ class DeviceManVK
 	VkSwapchainKHR swapchain = 0;
 	uint32_t swapChainCount = 0;
 	VkImage swapChainImages[8] = {};
+	VkImageView imageViews[8] = {};
+	VkFramebuffer framebuffers[8] = {};
 	VkCommandBuffer commandBuffer = 0;
 	VkSemaphore semaphore = 0;
 	VkCommandPool commandPool = 0;
-	VkImageView imageView = 0;
 	VkRenderPass renderPass = 0;
-	VkFramebuffer framebuffer = 0;
 	VkPipelineCache pipelineCache = 0;
 	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
+	uint32_t frameIndex = 0;
 	RECT rc = {};
+	void BeginScene();
 public:
 	void Create(HWND hWnd);
 	void Test();
@@ -207,10 +209,9 @@ void DeviceManVK::Create(HWND hWnd)
 
 	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr));
 	assert(swapChainCount <= _countof(swapChainImages));
+	assert(swapChainCount <= _countof(imageViews));
+	assert(swapChainCount <= _countof(framebuffers));
 	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, swapChainImages));
-
-	const VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, swapChainImages[0], VK_IMAGE_VIEW_TYPE_2D, surfaceFormats[0].format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
-	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageView));
 
 	const VkAttachmentReference colorAttachmentReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 	const VkSubpassDescription subpassDescriptions[] = { { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &colorAttachmentReference } };
@@ -218,10 +219,16 @@ void DeviceManVK::Create(HWND hWnd)
 	const VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, _countof(attachments), attachments, _countof(subpassDescriptions), subpassDescriptions };
 	afHandleVKError(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
 
-	const VkImageView frameBufferAttachmentImageView[1] = { { imageView } };
-	assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
-	const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, _countof(frameBufferAttachmentImageView), frameBufferAttachmentImageView, (uint32_t)rc.right, (uint32_t)rc.bottom, 1 };
-	afHandleVKError(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer));
+	for (int i = 0; i < (int)swapChainCount; i++)
+	{
+		const VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, swapChainImages[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormats[0].format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+		afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageViews[i]));
+
+		const VkImageView frameBufferAttachmentImageView[1] = { { imageViews[i] } };
+		assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
+		const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, _countof(frameBufferAttachmentImageView), frameBufferAttachmentImageView, (uint32_t)rc.right, (uint32_t)rc.bottom, 1 };
+		afHandleVKError(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffers[i]));
+	}
 
 	const VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
 	afHandleVKError(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool));
@@ -254,6 +261,8 @@ void DeviceManVK::Create(HWND hWnd)
 
 	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
 	afHandleVKError(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
+
+	BeginScene();
 }
 
 void DeviceManVK::Test()
@@ -277,7 +286,7 @@ void DeviceManVK::Test()
 	BufferContext vertexBuffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, physicalDeviceMemoryProperties, sizeof(vertexPositions), vertexPositions);
 
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
-	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffer, { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
+	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffers[frameIndex], { {}, {(uint32_t)rc.right, (uint32_t)rc.bottom} }, _countof(clearValues), clearValues };
 	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	vkCmdSetViewport(commandBuffer, 0, _countof(viewports), viewports);
@@ -296,6 +305,11 @@ void DeviceManVK::Test()
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
 }
 
+void DeviceManVK::BeginScene()
+{
+	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &frameIndex));
+}
+
 void DeviceManVK::Present()
 {
 	VkQueue queue = 0;
@@ -307,11 +321,10 @@ void DeviceManVK::Present()
 
 	afHandleVKError(vkQueueWaitIdle(queue));
 
-	uint32_t imageIndex = 0;
-	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex));
-
-	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
+	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &frameIndex };
 	afHandleVKError(vkQueuePresentKHR(queue, &presentInfo));
+
+	BeginScene();
 }
 
 void DeviceManVK::Destroy()
@@ -320,9 +333,12 @@ void DeviceManVK::Destroy()
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	commandBuffer = 0;
 	afSafeDeleteVk(vkDestroySemaphore, device, semaphore);
-	afSafeDeleteVk(vkDestroyImageView, device, imageView);
+	for (auto& it : imageViews)
+	{
+		afSafeDeleteVk(vkDestroyImageView, device, it);
+	}
 	afSafeDeleteVk(vkDestroyCommandPool, device, commandPool);
-	afSafeDeleteVk(vkDestroyFramebuffer, device, framebuffer);
+	std::for_each(framebuffers, framebuffers + _countof(framebuffers), [&](VkFramebuffer& framebuffer) { afSafeDeleteVk(vkDestroyFramebuffer, device, framebuffer);	});
 	afSafeDeleteVk(vkDestroyRenderPass, device, renderPass);
 	afSafeDeleteVk(vkDestroySwapchainKHR, device, swapchain);
 	vkDestroySurfaceKHR(inst, surface, nullptr);
@@ -336,6 +352,9 @@ void DeviceManVK::Destroy()
 void VulkanTest(HWND hWnd)
 {
 	deviceMan.Create(hWnd);
+	deviceMan.Test();
+	deviceMan.Test();
+	deviceMan.Test();
 	deviceMan.Test();
 	deviceMan.Destroy();
 }
