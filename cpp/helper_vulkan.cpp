@@ -2,6 +2,30 @@
 
 #pragma comment(lib, "vulkan-1.lib")
 
+class DeviceManVK
+{
+	VkDevice device = nullptr;
+	VkInstance inst = nullptr;
+	VkSurfaceKHR surface = 0;
+	VkSwapchainKHR swapchain = 0;
+	uint32_t swapChainCount = 0;
+	VkImage swapChainImages[8] = {};
+	VkCommandBuffer commandBuffer = 0;
+	VkSemaphore semaphore = 0;
+	VkCommandPool commandPool = 0;
+	VkImageView imageView = 0;
+	VkRenderPass renderPass = 0;
+	VkFramebuffer framebuffer = 0;
+	VkPipelineCache pipelineCache = 0;
+	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
+	RECT rc = {};
+public:
+	void Create(HWND hWnd);
+	void Test();
+	void Present();
+	void Destroy();
+} deviceMan;
+
 VkResult _afHandleVKError(const char* file, const char* func, int line, const char* command, VkResult result)
 {
 	const char *err = nullptr;
@@ -121,7 +145,7 @@ static VkPipeline CreatePipeline(VkDevice device, VkPipelineLayout pipelineLayou
 	return pipeline;
 }
 
-void VulkanTest(HWND hWnd)
+void DeviceManVK::Create(HWND hWnd)
 {
 	const char* extensions[] =
 	{
@@ -142,7 +166,6 @@ void VulkanTest(HWND hWnd)
 		0,
 #endif
 		instanceLayers, _countof(extensions), extensions };
-	VkInstance inst = nullptr;
 	afHandleVKError(vkCreateInstance(&instInfo, nullptr, &inst));
 
 	VkPhysicalDevice devices[16] = {};
@@ -154,11 +177,9 @@ void VulkanTest(HWND hWnd)
 	const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	const VkPhysicalDeviceFeatures features = {};
 	const VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, _countof(deviceExtensions), deviceExtensions, &features };
-	VkDevice device = nullptr;
 	afHandleVKError(vkCreateDevice(devices[0], &devInfo, nullptr, &device));
 
 	const VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, nullptr, 0, GetModuleHandle(nullptr), hWnd };
-	VkSurfaceKHR surface = 0;
 	afHandleVKError(vkCreateWin32SurfaceKHR(inst, &surfaceInfo, nullptr, &surface));
 
 	uint32_t numSurfaceFormats = 0;
@@ -180,38 +201,36 @@ void VulkanTest(HWND hWnd)
 	afHandleVKError(vkGetPhysicalDeviceSurfaceSupportKHR(devices[0], 0, surface, &physicalDeviceSurfaceSupport));
 	assert(physicalDeviceSurfaceSupport);
 
-	RECT rc;
 	GetClientRect(hWnd, &rc);
-	const VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace, { uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
-	VkSwapchainKHR swapchain = 0;
+	const VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace,{ uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
 	afHandleVKError(vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain));
 
-	uint32_t swapChainCount = 0;
-	VkImage images[8];
 	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr));
-	assert(swapChainCount <= _countof(images));
-	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, images));
+	assert(swapChainCount <= _countof(swapChainImages));
+	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, swapChainImages));
+
+	const VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, swapChainImages[0], VK_IMAGE_VIEW_TYPE_2D, surfaceFormats[0].format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageView));
 
 	const VkAttachmentReference colorAttachmentReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 	const VkSubpassDescription subpassDescriptions[] = { { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &colorAttachmentReference } };
 	const VkAttachmentDescription attachments[1] = { { 0, swapchainInfo.imageFormat, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR } };
 	const VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, _countof(attachments), attachments, _countof(subpassDescriptions), subpassDescriptions };
-	VkRenderPass renderPass;
 	afHandleVKError(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
 
-	VkImageView imageView = 0;
-	const VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, images[0], VK_IMAGE_VIEW_TYPE_2D, surfaceFormats[0].format, { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
-	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageView));
-
-	const VkImageView frameBufferAttachmentImageView[1] = { { imageView }};
+	const VkImageView frameBufferAttachmentImageView[1] = { { imageView } };
 	assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
 	const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, _countof(frameBufferAttachmentImageView), frameBufferAttachmentImageView, (uint32_t)rc.right, (uint32_t)rc.bottom, 1 };
-	VkFramebuffer framebuffer;
 	afHandleVKError(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer));
 
 	const VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
-	VkCommandPool commandPool;
 	afHandleVKError(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool));
+
+	const VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+	afHandleVKError(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer));
+
+	const VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+	afHandleVKError(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
 
 	uint32_t numPhysicalDevices = 0;
 	afHandleVKError(vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, nullptr));
@@ -231,34 +250,20 @@ void VulkanTest(HWND hWnd)
 	vkGetPhysicalDeviceFeatures(physicalDevice, &physicalDeviceFeatures);
 	VkPhysicalDeviceProperties physicalDeviceProperties;
 	vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
-	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemoryProperties);
 
-	VkQueue queue = 0;
-	vkGetDeviceQueue(device, 0, 0, &queue);
-	assert(queue);
+	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+	afHandleVKError(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
+}
 
-	const VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
-	VkCommandBuffer commandBuffer;
-	afHandleVKError(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer));
-
-	const VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-	VkSemaphore semaphore;
-	afHandleVKError(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
-
-	uint32_t imageIndex = 0;
-	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex));
-
+void DeviceManVK::Test()
+{
 	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 
 	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 	VkPipelineLayout pipelineLayout = 0;
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
-
-	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-	VkPipelineCache pipelineCache = 0;
-	afHandleVKError(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
 
 	const VkViewport viewports[] = { { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 } };
 	const VkRect2D scissors[] = { { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom } };
@@ -283,17 +288,34 @@ void VulkanTest(HWND hWnd)
 	vkCmdEndRenderPass(commandBuffer);
 	afHandleVKError(vkEndCommandBuffer(commandBuffer));
 
+	Present();
+
+	DeleteBufer(vertexBuffer);
+
+	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
+	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
+}
+
+void DeviceManVK::Present()
+{
+	VkQueue queue = 0;
+	vkGetDeviceQueue(device, 0, 0, &queue);
+	assert(queue);
+
 	const VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
 	afHandleVKError(vkQueueSubmit(queue, _countof(submitInfos), submitInfos, 0));
 
 	afHandleVKError(vkQueueWaitIdle(queue));
 
+	uint32_t imageIndex = 0;
+	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &imageIndex));
+
 	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &imageIndex };
 	afHandleVKError(vkQueuePresentKHR(queue, &presentInfo));
+}
 
-	DeleteBufer(vertexBuffer);
-	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
-	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
+void DeviceManVK::Destroy()
+{
 	afSafeDeleteVk(vkDestroyPipelineCache, device, pipelineCache);
 	vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 	commandBuffer = 0;
@@ -309,4 +331,11 @@ void VulkanTest(HWND hWnd)
 	device = nullptr;
 	vkDestroyInstance(inst, nullptr);
 	inst = nullptr;
+}
+
+void VulkanTest(HWND hWnd)
+{
+	deviceMan.Create(hWnd);
+	deviceMan.Test();
+	deviceMan.Destroy();
 }
