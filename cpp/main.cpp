@@ -171,6 +171,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_CLOSE:
 		//	app.Destroy();
+		triangle.Destroy();
 		deviceMan.Destroy();
 		DestroyWindow(hWnd);
 		return 0;
