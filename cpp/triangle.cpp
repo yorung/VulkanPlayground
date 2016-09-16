@@ -2,8 +2,18 @@
 
 Triangle triangle;
 
-static VkVertexInputBindingDescription bindings[] = { { 0, sizeof(Vec2), VK_VERTEX_INPUT_RATE_VERTEX } };
-static VkVertexInputAttributeDescription attributes[] = { { 0, 0, VK_FORMAT_R32G32_SFLOAT, 0 } };
+struct TriangleVertex
+{
+	Vec3 Pos;
+	Vec3 Color;
+};
+
+static VkVertexInputBindingDescription bindings[] = { { 0, sizeof(TriangleVertex), VK_VERTEX_INPUT_RATE_VERTEX } };
+static VkVertexInputAttributeDescription attributes[] =
+{
+	{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+	{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, 12 },
+};
 
 void Triangle::Draw()
 {
@@ -16,7 +26,7 @@ void Triangle::Draw()
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	VkDeviceSize offsets[1] = {};
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
-	vkCmdDraw(commandBuffer, 4, 1, 0, 0);
+	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 }
 
 void Triangle::Create()
@@ -38,10 +48,14 @@ void Triangle::Create()
 
 	pipeline = deviceMan.CreatePipeline("solid", pipelineLayout, arrayparam(bindings), arrayparam(attributes));
 
-	Vec2 vertexPositions[3];
+	TriangleVertex vertexPositions[3];
 	for (int i = 0; i < 3; i++)
 	{
-		vertexPositions[i] = Vec2(sin(i * (float)M_PI * 2 / 3), cos(i * (float)M_PI * 2 / 3));
+		vertexPositions[i] =
+		{
+			Vec3(sin(i * (float)M_PI * 2 / 3), cos(i * (float)M_PI * 2 / 3), 0),
+			Vec3(i == 0, i == 1, i == 2),
+		};
 	}
 	vertexBuffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(vertexPositions), vertexPositions);
 	uniformBuffer = CreateBuffer(device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(Mat), nullptr);
