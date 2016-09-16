@@ -95,8 +95,18 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProperties);
 	assert(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
 
-	TextureContext textureContext;
 	VkDevice device = deviceMan.GetDevice();
+	{
+		VkImage testImage = 0;
+		const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ 0x400, 0x400, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
+		vkCreateImage(device, &imageCreateInfo, nullptr, &testImage);
+		vkDestroyImage(device, testImage, nullptr);
+
+	}
+
+
+
+	TextureContext textureContext;
 	textureContext.device = device;
 	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
 	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
@@ -108,7 +118,8 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 
 	TexDesc texDesc;
 	texDesc.size = size;
-	if (image) {
+	if (image)
+	{
 		afWriteTexture(textureContext, texDesc, image);
 	}
 	return textureContext;

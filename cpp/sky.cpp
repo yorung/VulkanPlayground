@@ -40,8 +40,8 @@ void Sky::Create()
 	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
 
 	TexDesc desc;
-	texture = afLoadTexture("yangjae.dds", desc);
-//	texture = LoadTextureViaOS("hakodate.jpg", desc);
+//	texture = afLoadTexture("yangjae.dds", desc);
+	texture = afLoadTexture("hakodate.jpg", desc);
 }
 
 void Sky::Destroy()
