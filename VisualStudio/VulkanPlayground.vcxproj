@@ -158,19 +158,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\cpp\app.h" />
     <ClInclude Include="..\cpp\helper.h" />
     <ClInclude Include="..\cpp\helper_vulkan.h" />
     <ClInclude Include="..\cpp\helper_win.h" />
+    <ClInclude Include="..\cpp\sky.h" />
     <ClInclude Include="..\cpp\stdafx.h" />
     <ClInclude Include="..\cpp\triangle.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\cpp\app.cpp" />
     <ClCompile Include="..\cpp\helper.cpp" />
     <ClCompile Include="..\cpp\helper_vulkan.cpp" />
     <ClCompile Include="..\cpp\helper_win.cpp" />
     <ClCompile Include="..\cpp\main.cpp" />
+    <ClCompile Include="..\cpp\sky.cpp" />
     <ClCompile Include="..\cpp\stdafx.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(VULKAN_SDK)\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

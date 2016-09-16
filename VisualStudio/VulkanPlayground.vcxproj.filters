@@ -39,6 +39,12 @@
     <ClInclude Include="..\cpp\triangle.h">
       <Filter>cpp</Filter>
     </ClInclude>
+    <ClInclude Include="..\cpp\sky.h">
+      <Filter>cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cpp\app.h">
+      <Filter>cpp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\cpp\helper_vulkan.cpp">
@@ -57,6 +63,12 @@
       <Filter>cpp</Filter>
     </ClCompile>
     <ClCompile Include="..\cpp\triangle.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cpp\sky.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cpp\app.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
   </ItemGroup>
