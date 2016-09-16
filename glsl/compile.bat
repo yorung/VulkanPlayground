@@ -1,3 +1,5 @@
-%VK_SDK_PATH%\Bin32\glslangValidator.exe -V test.vert -o ../pack/assets/test.vert.spv
-%VK_SDK_PATH%\Bin32\glslangValidator.exe -V test.frag -o ../pack/assets/test.frag.spv
+set COMPILER=%VK_SDK_PATH%\Bin32\glslangValidator.exe
+
+for %%i in (*.vert,*.frag) do %COMPILER% -V %%i -o ../pack/assets/%%i.spv
+
 pause

@@ -36,7 +36,7 @@ void Triangle::Create()
 	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, descriptorPool, arrayparam(descriptorSetLayouts) };
 	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSet));
 
-	pipeline = deviceMan.CreatePipeline("test", pipelineLayout, arrayparam(bindings), arrayparam(attributes));
+	pipeline = deviceMan.CreatePipeline("solid", pipelineLayout, arrayparam(bindings), arrayparam(attributes));
 
 	Vec2 vertexPositions[3];
 	for (int i = 0; i < 3; i++)
