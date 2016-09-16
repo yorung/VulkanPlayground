@@ -158,7 +158,7 @@ bool ProcessWindowMessage(HWND hWnd, HACCEL hAccelTable)
 		return true;
 	}
 }
-/*
+
 namespace Gdiplus {
 	using std::min;
 	using std::max;
@@ -199,15 +199,15 @@ static bool LoadImageViaGdiPlus(const char* name, IVec2& size, std::vector<uint3
 	return w && h;
 }
 
-SRVID LoadTextureViaOS(const char* name, IVec2& size)
+TextureContext LoadTextureViaOS(const char* name, IVec2& size)
 {
 	std::vector<uint32_t> col;
 	if (!LoadImageViaGdiPlus(name, size, col)) {
-		return SRVID();
+		return TextureContext();
 	}
 	return afCreateTexture2D(AFDT_R8G8B8A8_UNORM, size, &col[0]);
 }
-
+/*
 #define IS_HANGUL(c)	( (c) >= 0xAC00 && (c) <= 0xD7A3 )
 #define IS_HANGUL2(c)	( ( (c) >= 0x3130 && (c) <= 0x318F ) || IS_HANGUL(c) )	// hangul + jamo
 

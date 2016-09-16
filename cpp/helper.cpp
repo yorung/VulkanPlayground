@@ -53,7 +53,7 @@ VBOID afCreateTiledPlaneVBO(int numTiles)
 	}
 	return afCreateVertexBuffer((int)v.size() * sizeof(v[0]), &v[0]);
 }
-
+*/
 struct DDSHeader {
 	uint32_t h3[3];
 	int h, w;
@@ -169,7 +169,7 @@ SRVID afLoadTexture(const char* name, TexDesc& desc)
 	afSetTextureName(tex, name);
 	return tex;
 }
-
+/*
 IBOID afCreateQuadListIndexBuffer(int numQuads)
 {
 	std::vector<AFIndex> indi;

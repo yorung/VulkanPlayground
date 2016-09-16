@@ -38,10 +38,15 @@ void Sky::Create()
 	VkDescriptorBufferInfo descriptorBufferInfo = { uniformBuffer.buffer, 0, uniformBuffer.size };
 	VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &descriptorBufferInfo } };
 	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
+
+	TexDesc desc;
+	texture = afLoadTexture("yangjae.dds", desc);
+//	texture = LoadTextureViaOS("hakodate.jpg", desc);
 }
 
 void Sky::Destroy()
 {
+	DeleteTexture(texture);
 	DeleteBufer(uniformBuffer);
 	VkDevice device = deviceMan.GetDevice();
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);

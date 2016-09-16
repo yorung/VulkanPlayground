@@ -84,6 +84,57 @@ BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPh
 	return buffer;
 }
 
+void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, void *image)
+{
+
+}
+
+TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image)
+{
+	VkFormatProperties formatProperties;
+	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProperties);
+	assert(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+
+	TextureContext textureContext;
+	VkDevice device = deviceMan.GetDevice();
+	textureContext.device = device;
+	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
+	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
+
+	VkMemoryRequirements req = {};
+	vkGetImageMemoryRequirements(device, textureContext.image, &req);
+	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(deviceMan.physicalDeviceMemoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
+	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &textureContext.memory));
+
+	TexDesc texDesc;
+	texDesc.size = size;
+	if (image) {
+		afWriteTexture(textureContext, texDesc, image);
+	}
+	return textureContext;
+}
+
+SRVID afCreateTexture2D(AFDTFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[])
+{
+	VkFormatProperties formatProperties;
+	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProperties);
+	assert(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+
+	TextureContext textureContext;
+	VkDevice device = deviceMan.GetDevice();
+	textureContext.device = device;
+	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)desc.size.x, (uint32_t)desc.size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
+	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
+
+	return textureContext;
+}
+
+void DeleteTexture(TextureContext& textureContext)
+{
+	afSafeDeleteVk(vkDestroyImage, textureContext.device, textureContext.image);
+	afSafeDeleteVk(vkFreeMemory, textureContext.device, textureContext.memory);
+}
+
 VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numBindings, const VkVertexInputBindingDescription bindings[], uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[])
 {
 	char path[MAX_PATH];
@@ -136,34 +187,35 @@ void DeviceManVK::Create(HWND hWnd)
 	VkPhysicalDevice devices[16] = {};
 	uint32_t numDevices = _countof(devices);
 	afHandleVKError(vkEnumeratePhysicalDevices(inst, &numDevices, devices));
+	physicalDevice = devices[0];
 
 	float priorities[] = { 0 };
 	const VkDeviceQueueCreateInfo devQueueInfos[] = { { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, 0, 1, priorities } };
 	const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	const VkPhysicalDeviceFeatures features = {};
 	const VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, arrayparam(deviceExtensions), &features };
-	afHandleVKError(vkCreateDevice(devices[0], &devInfo, nullptr, &device));
+	afHandleVKError(vkCreateDevice(physicalDevice, &devInfo, nullptr, &device));
 
 	const VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, nullptr, 0, GetModuleHandle(nullptr), hWnd };
 	afHandleVKError(vkCreateWin32SurfaceKHR(inst, &surfaceInfo, nullptr, &surface));
 
 	uint32_t numSurfaceFormats = 0;
 	VkSurfaceFormatKHR surfaceFormats[32] = {};
-	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(devices[0], surface, &numSurfaceFormats, nullptr));
+	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &numSurfaceFormats, nullptr));
 	assert(numSurfaceFormats <= _countof(surfaceFormats));
-	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(devices[0], surface, &numSurfaceFormats, surfaceFormats));
+	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &numSurfaceFormats, surfaceFormats));
 
 	uint32_t numPresentModes = 0;
 	VkPresentModeKHR presentModes[32] = {};
-	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &numPresentModes, nullptr));
+	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, nullptr));
 	assert(numPresentModes <= _countof(presentModes));
-	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(devices[0], surface, &numPresentModes, presentModes));
+	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, presentModes));
 
 	VkSurfaceCapabilitiesKHR surfaceCaps = {};
-	afHandleVKError(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[0], surface, &surfaceCaps));
+	afHandleVKError(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
 
 	VkBool32 physicalDeviceSurfaceSupport = VK_FALSE;
-	afHandleVKError(vkGetPhysicalDeviceSurfaceSupportKHR(devices[0], 0, surface, &physicalDeviceSurfaceSupport));
+	afHandleVKError(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, 0, surface, &physicalDeviceSurfaceSupport));
 	assert(physicalDeviceSurfaceSupport);
 
 	GetClientRect(hWnd, &rc);

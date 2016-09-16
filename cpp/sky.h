@@ -1,6 +1,7 @@
 class Sky
 {
 	BufferContext uniformBuffer;
+	TextureContext texture;
 	VkPipelineLayout pipelineLayout = 0;
 	VkPipeline pipeline = 0;
 	VkDescriptorSetLayout descriptorSetLayouts[1] = {};

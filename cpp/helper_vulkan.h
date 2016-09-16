@@ -1,6 +1,13 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
 
+typedef VkFormat AFDTFormat;
+#define AFDT_INVALID VK_FORMAT_UNDEFINED
+#define AFDT_BC1_UNORM VK_FORMAT_BC1_RGBA_UNORM_BLOCK
+#define AFDT_BC2_UNORM VK_FORMAT_BC2_UNORM_BLOCK
+#define AFDT_BC3_UNORM VK_FORMAT_BC3_UNORM_BLOCK
+#define AFDT_R8G8B8A8_UNORM VK_FORMAT_R8G8B8A8_UNORM
+
 VkResult _afHandleVKError(const char* file, const char* func, int line, const char* command, VkResult result);
 #define afHandleVKError(command) do{ _afHandleVKError(__FILE__, __FUNCTION__, __LINE__, #command, command); } while(0)
 
@@ -26,6 +33,32 @@ void DeleteBufer(BufferContext& buffer);
 void WriteBuffer(BufferContext& buffer, int size, const void* srcData);
 BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData);
 
+struct AFTexSubresourceData
+{
+	const void* ptr;
+	uint32_t pitch;
+	uint32_t pitchSlice;
+};
+
+struct TextureContext
+{
+	VkDevice device = 0;
+	VkImage image = 0;
+	VkDeviceMemory memory = 0;
+	bool operator !() { return !image; }
+};
+typedef TextureContext SRVID;
+
+SRVID afLoadTexture(const char* name, TexDesc& desc);
+SRVID LoadTextureViaOS(const char* name, IVec2& size);
+SRVID afCreateTexture2D(VkFormat format, const IVec2& size, void *image);
+SRVID afCreateTexture2D(AFDTFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
+void DeleteTexture(TextureContext& textureContext);
+
+inline void afSetTextureName(const TextureContext& tex, const char* name)
+{
+}
+
 class DeviceManVK
 {
 	VkDevice device = nullptr;
@@ -47,6 +80,7 @@ class DeviceManVK
 	void BeginScene();
 public:
 	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
+	VkPhysicalDevice physicalDevice = nullptr;
 	VkDevice GetDevice() { return device; }
 	VkCommandBuffer commandBuffer = 0;
 	void Create(HWND hWnd);
