@@ -38,7 +38,7 @@ void Sky::Create()
 
 	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr, 0, nullptr);
 
-	uniformBuffer = CreateBuffer(device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(Mat), nullptr);
+	uniformBuffer = afCreateUBO(sizeof(Mat));
 
 	TexDesc desc;
 	//	texture = afLoadTexture("yangjae.dds", desc);
@@ -60,7 +60,7 @@ void Sky::Create()
 void Sky::Destroy()
 {
 	DeleteTexture(texture);
-	DeleteBufer(uniformBuffer);
+	afSafeDeleteBufer(uniformBuffer);
 	VkDevice device = deviceMan.GetDevice();
 	afSafeDeleteVk(vkDestroySampler, device, sampler);
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);

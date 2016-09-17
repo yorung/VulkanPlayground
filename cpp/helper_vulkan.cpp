@@ -48,7 +48,7 @@ static uint32_t GetCompatibleMemoryTypeIndex(const VkPhysicalDeviceMemoryPropert
 	return -1;	// dummy
 }
 
-void DeleteBufer(BufferContext& buffer)
+void afSafeDeleteBufer(BufferContext& buffer)
 {
 	afSafeDeleteVk(vkDestroyBuffer, buffer.device, buffer.buffer);
 	afSafeDeleteVk(vkFreeMemory, buffer.device, buffer.memory);
@@ -60,6 +60,16 @@ void WriteBuffer(BufferContext& buffer, int size, const void* srcData)
 	afHandleVKError(vkMapMemory(buffer.device, buffer.memory, 0, size, 0, &mappedMemory));
 	memcpy(mappedMemory, srcData, size);
 	vkUnmapMemory(buffer.device, buffer.memory);
+}
+
+VBOID afCreateVertexBuffer(int size, const void* srcData)
+{
+	return CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, srcData);
+}
+
+UBOID afCreateUBO(int size, const void* srcData)
+{
+	return CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, srcData);
 }
 
 BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData)

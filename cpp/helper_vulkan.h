@@ -26,9 +26,14 @@ struct BufferContext
 	VkDeviceSize size = 0;
 };
 
-void DeleteBufer(BufferContext& buffer);
+void afSafeDeleteBufer(BufferContext& buffer);
 void WriteBuffer(BufferContext& buffer, int size, const void* srcData);
 BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData);
+
+typedef BufferContext VBOID;
+typedef BufferContext UBOID;
+VBOID afCreateVertexBuffer(int size, const void* srcData);
+UBOID afCreateUBO(int size, const void* srcData = nullptr);
 
 struct AFTexSubresourceData
 {

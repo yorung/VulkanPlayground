@@ -57,8 +57,8 @@ void Triangle::Create()
 			Vec3(i == 0, i == 1, i == 2),
 		};
 	}
-	vertexBuffer = CreateBuffer(device, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(vertexPositions), vertexPositions);
-	uniformBuffer = CreateBuffer(device, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(Mat), nullptr);
+	vertexBuffer = afCreateVertexBuffer(sizeof(vertexPositions), vertexPositions);
+	uniformBuffer = afCreateUBO(sizeof(Mat));
 
 	VkDescriptorBufferInfo descriptorBufferInfo = { uniformBuffer.buffer, 0, uniformBuffer.size };
 	VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &descriptorBufferInfo } };
@@ -67,8 +67,8 @@ void Triangle::Create()
 
 void Triangle::Destroy()
 {
-	DeleteBufer(uniformBuffer);
-	DeleteBufer(vertexBuffer);
+	afSafeDeleteBufer(uniformBuffer);
+	afSafeDeleteBufer(vertexBuffer);
 	VkDevice device = deviceMan.GetDevice();
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);

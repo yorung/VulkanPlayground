@@ -1,6 +1,6 @@
 class Sky
 {
-	BufferContext uniformBuffer;
+	UBOID uniformBuffer;
 	TextureContext texture;
 	VkSampler sampler = 0;
 	VkPipelineLayout pipelineLayout = 0;
