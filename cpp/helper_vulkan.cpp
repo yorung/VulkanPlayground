@@ -254,13 +254,6 @@ void DeviceManVK::Create(HWND hWnd)
 	const VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 	afHandleVKError(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
 
-	uint32_t numPhysicalDevices = 0;
-	afHandleVKError(vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, nullptr));
-
-	assert(numPhysicalDevices == 1);
-	VkPhysicalDevice physicalDevice;
-	afHandleVKError(vkEnumeratePhysicalDevices(inst, &numPhysicalDevices, &physicalDevice));
-
 	uint32_t numQueueFamilyProperties = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &numQueueFamilyProperties, nullptr);
 	VkQueueFamilyProperties queueFamilyProperties[2];
