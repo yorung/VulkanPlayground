@@ -11,6 +11,7 @@ VkResult _afHandleVKError(const char* file, const char* func, int line, const ch
 	{
 #define E(er) case er: err = #er; break
 		E(VK_INCOMPLETE);
+		E(VK_ERROR_VALIDATION_FAILED_EXT);
 #undef E
 	default:
 		aflog("%s %s(%d): err=%d %s\n", file, func, line, result, command);
@@ -113,13 +114,19 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 
 	TextureContext textureContext;
 	textureContext.device = device;
-	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
+	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
+//	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
 	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
 
 	VkMemoryRequirements req = {};
 	vkGetImageMemoryRequirements(device, textureContext.image, &req);
 	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(deviceMan.physicalDeviceMemoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
 	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &textureContext.memory));
+
+	afHandleVKError(vkBindImageMemory(device, textureContext.image, textureContext.memory, 0));
+
+	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image, VK_IMAGE_VIEW_TYPE_2D, format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &textureContext.view));
 
 	TexDesc texDesc;
 	texDesc.size = size;
@@ -147,6 +154,7 @@ SRVID afCreateTexture2D(AFDTFormat format, const struct TexDesc& desc, int mipCo
 
 void DeleteTexture(TextureContext& textureContext)
 {
+	afSafeDeleteVk(vkDestroyImageView, textureContext.device, textureContext.view);
 	afSafeDeleteVk(vkDestroyImage, textureContext.device, textureContext.image);
 	afSafeDeleteVk(vkFreeMemory, textureContext.device, textureContext.memory);
 }

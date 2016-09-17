@@ -45,6 +45,7 @@ struct TextureContext
 	VkDevice device = 0;
 	VkImage image = 0;
 	VkDeviceMemory memory = 0;
+	VkImageView view = 0;
 	bool operator !() { return !image; }
 };
 typedef TextureContext SRVID;
