@@ -42,6 +42,9 @@ void Sky::Create()
 	TexDesc desc;
 //	texture = afLoadTexture("yangjae.dds", desc);
 	texture = afLoadTexture("hakodate.jpg", desc);
+
+	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);
 }
 
 void Sky::Destroy()
@@ -49,6 +52,7 @@ void Sky::Destroy()
 	DeleteTexture(texture);
 	DeleteBufer(uniformBuffer);
 	VkDevice device = deviceMan.GetDevice();
+	afSafeDeleteVk(vkDestroySampler, device, sampler);
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
 
