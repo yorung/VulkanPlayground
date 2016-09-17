@@ -86,7 +86,12 @@ BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPh
 
 void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, void *image)
 {
-
+	void* mappedMemory = nullptr;
+	int size = texDesc.size.x * texDesc.size.y * 4;
+	afHandleVKError(vkMapMemory(textureContext.device, textureContext.memory, 0, size, 0, &mappedMemory));
+	assert(mappedMemory);
+	memcpy(mappedMemory, image, size);
+	vkUnmapMemory(textureContext.device, textureContext.memory);
 }
 
 TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image)
