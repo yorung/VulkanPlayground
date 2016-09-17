@@ -41,8 +41,8 @@ void Sky::Create()
 	uniformBuffer = afCreateUBO(sizeof(Mat));
 
 	TexDesc desc;
-	//	texture = afLoadTexture("yangjae.dds", desc);
-	texture = afLoadTexture("hakodate.jpg", desc);
+	texture = afLoadTexture("yangjae.dds", desc);
+	//texture = afLoadTexture("hakodate.jpg", desc);
 
 	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);

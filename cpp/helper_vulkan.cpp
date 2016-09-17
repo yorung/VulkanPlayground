@@ -105,27 +105,27 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, void
 	vkUnmapMemory(textureContext.device, textureContext.memory);
 }
 
+void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, const AFTexSubresourceData datas[])
+{
+	void* mappedMemory = nullptr;
+	int size = datas[0].pitchSlice;
+	afHandleVKError(vkMapMemory(textureContext.device, textureContext.memory, 0, size, 0, &mappedMemory));
+	assert(mappedMemory);
+	memcpy(mappedMemory, datas[0].ptr, size);
+	vkUnmapMemory(textureContext.device, textureContext.memory);
+}
+
 TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image)
 {
 	VkFormatProperties formatProperties;
-	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProperties);
+	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, format, &formatProperties);
 	assert(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
 
 	VkDevice device = deviceMan.GetDevice();
-	{
-		VkImage testImage = 0;
-		const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ 0x400, 0x400, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
-		vkCreateImage(device, &imageCreateInfo, nullptr, &testImage);
-		vkDestroyImage(device, testImage, nullptr);
-
-	}
-
-
 
 	TextureContext textureContext;
 	textureContext.device = device;
 	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
-//	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
 	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
 
 	VkMemoryRequirements req = {};
@@ -150,7 +150,7 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 SRVID afCreateTexture2D(AFDTFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[])
 {
 	VkFormatProperties formatProperties;
-	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, VK_FORMAT_R8G8B8A8_UNORM, &formatProperties);
+	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, format, &formatProperties);
 	assert(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
 
 	TextureContext textureContext;
@@ -159,6 +159,20 @@ SRVID afCreateTexture2D(AFDTFormat format, const struct TexDesc& desc, int mipCo
 	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)desc.size.x, (uint32_t)desc.size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
 	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
 
+	VkMemoryRequirements req = {};
+	vkGetImageMemoryRequirements(device, textureContext.image, &req);
+	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(deviceMan.physicalDeviceMemoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
+	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &textureContext.memory));
+
+	afHandleVKError(vkBindImageMemory(device, textureContext.image, textureContext.memory, 0));
+
+	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image, VK_IMAGE_VIEW_TYPE_2D, format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &textureContext.view));
+
+	if (datas)
+	{
+		afWriteTexture(textureContext, desc, datas);
+	}
 	return textureContext;
 }
 
