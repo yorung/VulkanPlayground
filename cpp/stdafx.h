@@ -21,11 +21,17 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan.h>
+
 #include "af_math.h"
 #include "helper.h"
 #include "helper_win.h"
 #include "helper_text.h"
 #include "helper_vulkan.h"
+#include "matrix_man.h"
+#include "dev_camera.h"
+#include "system_misc.h"
 #include "triangle.h"
 #include "sky.h"
 #include "app.h"

@@ -1,6 +1,3 @@
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-
 typedef VkFormat AFDTFormat;
 #define AFDT_INVALID VK_FORMAT_UNDEFINED
 #define AFDT_BC1_UNORM VK_FORMAT_BC1_RGBA_UNORM_BLOCK

@@ -71,6 +71,15 @@
     <ClCompile Include="..\cpp\app.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
+    <ClCompile Include="..\cpp\system_misc.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cpp\matrix_man.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cpp\dev_camera.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="VulkanPlayground.rc">

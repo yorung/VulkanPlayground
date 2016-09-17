@@ -138,7 +138,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	HDC hdc;
 
-	//	IVec2 screenSize = systemMisc.GetScreenSize();
+	IVec2 screenSize = systemMisc.GetScreenSize();
 	switch (message)
 	{
 	case WM_COMMAND:
@@ -179,23 +179,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_LBUTTONDOWN:
 		SetCapture(hWnd);
-		//	devCamera.LButtonDown(LOWORD(lParam) / (float)screenSize.x, HIWORD(lParam) / (float)screenSize.y);
-		//	systemMisc.mouseDown = true;
+		devCamera.LButtonDown(LOWORD(lParam) / (float)screenSize.x, HIWORD(lParam) / (float)screenSize.y);
+		systemMisc.mouseDown = true;
 		break;
 	case WM_LBUTTONUP:
 		ReleaseCapture();
-		//	devCamera.LButtonUp(LOWORD(lParam) / (float)screenSize.x, HIWORD(lParam) / (float)screenSize.y);
-		//	systemMisc.mouseDown = false;
+		devCamera.LButtonUp(LOWORD(lParam) / (float)screenSize.x, HIWORD(lParam) / (float)screenSize.y);
+		systemMisc.mouseDown = false;
 		break;
 	case WM_MOUSEMOVE:
-		//	systemMisc.SetMousePos(IVec2(MAKEPOINTS(lParam).x, MAKEPOINTS(lParam).y));
-		//	devCamera.MouseMove(MAKEPOINTS(lParam).x / (float)screenSize.x, MAKEPOINTS(lParam).y / (float)screenSize.y);
+		systemMisc.SetMousePos(IVec2(MAKEPOINTS(lParam).x, MAKEPOINTS(lParam).y));
+		devCamera.MouseMove(MAKEPOINTS(lParam).x / (float)screenSize.x, MAKEPOINTS(lParam).y / (float)screenSize.y);
 		break;
 	case WM_MOUSEWHEEL:
-		//	devCamera.MouseWheel((short)HIWORD(wParam) / (float)WHEEL_DELTA);
+		devCamera.MouseWheel((short)HIWORD(wParam) / (float)WHEEL_DELTA);
 		break;
 	case WM_SIZE:
-		//	systemMisc.SetScreenSize(IVec2(LOWORD(lParam), HIWORD(lParam)));
+		systemMisc.SetScreenSize(IVec2(LOWORD(lParam), HIWORD(lParam)));
 		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);

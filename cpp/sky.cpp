@@ -4,8 +4,13 @@ Sky sky;
 
 void Sky::Draw()
 {
-	Mat mat = q2m(Quat(Vec3(0, 0, 1), (float)GetTime()));
-	WriteBuffer(uniformBuffer, sizeof(mat), &mat);
+	Mat matV, matP;
+	matrixMan.Get(MatrixMan::VIEW, matV);
+	matrixMan.Get(MatrixMan::PROJ, matP);
+	matV._41 = matV._42 = matV._43 = 0;
+	Mat invVP = inv(matV * matP);
+
+	WriteBuffer(uniformBuffer, sizeof(invVP), &invVP);
 
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);

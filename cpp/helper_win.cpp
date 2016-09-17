@@ -199,11 +199,11 @@ static bool LoadImageViaGdiPlus(const char* name, IVec2& size, std::vector<uint3
 	return w && h;
 }
 
-TextureContext LoadTextureViaOS(const char* name, IVec2& size)
+SRVID LoadTextureViaOS(const char* name, IVec2& size)
 {
 	std::vector<uint32_t> col;
 	if (!LoadImageViaGdiPlus(name, size, col)) {
-		return TextureContext();
+		return SRVID();
 	}
 	return afCreateTexture2D(AFDT_R8G8B8A8_UNORM, size, &col[0]);
 }
