@@ -26,7 +26,9 @@ void Triangle::Draw()
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	VkDeviceSize offsets[1] = {};
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
-	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+	vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+	vkCmdDrawIndexed(commandBuffer, 3, 1, 0, 0, 0);
+//	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 }
 
 void Triangle::Create()
@@ -59,6 +61,8 @@ void Triangle::Create()
 	}
 	vertexBuffer = afCreateVertexBuffer(sizeof(vertexPositions), vertexPositions);
 	uniformBuffer = afCreateUBO(sizeof(Mat));
+	unsigned short indexData[] = {0, 1, 2};
+	indexBuffer = CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(indexData), indexData);
 
 	VkDescriptorBufferInfo descriptorBufferInfo = { uniformBuffer.buffer, 0, uniformBuffer.size };
 	VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, &descriptorBufferInfo } };
@@ -68,6 +72,7 @@ void Triangle::Create()
 void Triangle::Destroy()
 {
 	afSafeDeleteBufer(uniformBuffer);
+	afSafeDeleteBufer(indexBuffer);
 	afSafeDeleteBufer(vertexBuffer);
 	VkDevice device = deviceMan.GetDevice();
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
