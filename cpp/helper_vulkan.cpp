@@ -15,6 +15,7 @@ VkResult _afHandleVKError(const char* file, const char* func, int line, const ch
 #undef E
 	default:
 		aflog("%s %s(%d): err=%d %s\n", file, func, line, result, command);
+		assert(0);
 		return result;
 	case VK_SUCCESS:
 		return VK_SUCCESS;
@@ -106,14 +107,42 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, void
 	vkUnmapMemory(textureContext.device, textureContext.memory);
 }
 
-void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, const AFTexSubresourceData datas[])
+void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, int mipCount, const AFTexSubresourceData datas[])
 {
+	VkBufferImageCopy copyInfo[32];
+	assert(mipCount <= dimof(copyInfo));
+	VkDeviceSize total = 0;
+	for (int i = 0; i < mipCount; i++)
+	{
+		copyInfo[i] = { total, datas[i].pitch, texDesc.size.y >> i,{ VK_IMAGE_ASPECT_COLOR_BIT, i, 0, 1 },{},{ texDesc.size.x >> i, texDesc.size.y >> i, 1 } };
+		total += datas[i].pitchSlice;
+	}
+
+	const VkBufferCreateInfo stagingBufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, total, VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
+	VkBuffer stagingBuffer = 0;
+	VkDevice device = deviceMan.GetDevice();
+	afHandleVKError(vkCreateBuffer(device, &stagingBufferCreateInfo, nullptr, &stagingBuffer));
+	VkMemoryRequirements req = {};
+	vkGetBufferMemoryRequirements(device, stagingBuffer, &req);
+	VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(deviceMan.physicalDeviceMemoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
+	VkDeviceMemory stagingMemory = 0;
+	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &stagingMemory));
+	afHandleVKError(vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0));
 	void* mappedMemory = nullptr;
-	int size = datas[0].pitchSlice;
-	afHandleVKError(vkMapMemory(textureContext.device, textureContext.memory, 0, size, 0, &mappedMemory));
+	afHandleVKError(vkMapMemory(device, stagingMemory, 0, total, 0, &mappedMemory));
 	assert(mappedMemory);
-	memcpy(mappedMemory, datas[0].ptr, size);
-	vkUnmapMemory(textureContext.device, textureContext.memory);
+	for (int i = 0; i < mipCount; i++)
+	{
+		memcpy((uint8_t*)mappedMemory + copyInfo[i], datas[i].ptr, datas[i].pitchSlice);
+	}
+	vkUnmapMemory(device, stagingMemory);
+
+	//void* mappedMemory = nullptr;
+	//int size = datas[0].pitchSlice;
+	//afHandleVKError(vkMapMemory(textureContext.device, textureContext.memory, 0, size, 0, &mappedMemory));
+	//assert(mappedMemory);
+	//memcpy(mappedMemory, datas[0].ptr, size);
+	//vkUnmapMemory(textureContext.device, textureContext.memory);
 }
 
 TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image)
@@ -150,6 +179,8 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 
 SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[])
 {
+//	mipCount = 1;
+
 	VkFormatProperties formatProperties;
 	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, format, &formatProperties);
 	assert(formatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
@@ -157,22 +188,22 @@ SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCou
 	TextureContext textureContext;
 	VkDevice device = deviceMan.GetDevice();
 	textureContext.device = device;
-	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)desc.size.x, (uint32_t)desc.size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
+	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)desc.size.x, (uint32_t)desc.size.y, 1 }, (uint32_t)mipCount, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_UNDEFINED };
 	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
 
 	VkMemoryRequirements req = {};
 	vkGetImageMemoryRequirements(device, textureContext.image, &req);
-	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(deviceMan.physicalDeviceMemoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
+	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(deviceMan.physicalDeviceMemoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) };
 	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &textureContext.memory));
 
 	afHandleVKError(vkBindImageMemory(device, textureContext.image, textureContext.memory, 0));
 
-	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image, VK_IMAGE_VIEW_TYPE_2D, format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image, VK_IMAGE_VIEW_TYPE_2D, format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, (uint32_t)mipCount, 0, 1 } };
 	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &textureContext.view));
 
 	if (datas)
 	{
-		afWriteTexture(textureContext, desc, datas);
+		afWriteTexture(textureContext, desc, int mipCount, datas);
 	}
 	return textureContext;
 }
