@@ -114,7 +114,8 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, int 
 	VkDeviceSize total = 0;
 	for (int i = 0; i < mipCount; i++)
 	{
-		copyInfo[i] = { total, datas[i].pitch, (uint32_t)texDesc.size.y >> i,{ VK_IMAGE_ASPECT_COLOR_BIT, (uint32_t)i, 0, 1 },{},{ (uint32_t)texDesc.size.x >> i, (uint32_t)texDesc.size.y >> i, 1 } };
+		copyInfo[i] = { total, 0, 0,{ VK_IMAGE_ASPECT_COLOR_BIT, (uint32_t)i, 0, 1 },{},{ (uint32_t)texDesc.size.x >> i, (uint32_t)texDesc.size.y >> i, 1 } };
+//		copyInfo[i] = { total, datas[i].pitch, (uint32_t)texDesc.size.y >> i,{ VK_IMAGE_ASPECT_COLOR_BIT, (uint32_t)i, 0, 1 },{},{ (uint32_t)texDesc.size.x >> i, (uint32_t)texDesc.size.y >> i, 1 } };
 		total += datas[i].pitchSlice;
 	}
 

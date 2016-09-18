@@ -54,7 +54,7 @@ void Triangle::Create()
 	{
 		vertexPositions[i] =
 		{
-			Vec3(sin(i * (float)M_PI * 2 / 3), cos(i * (float)M_PI * 2 / 3), 0),
+			Vec3(sin(i * (float)M_PI * 2 / 3), cos(i * (float)M_PI * 2 / 3), 0) * 0.5,
 			Vec3(i == 0, i == 1, i == 2),
 		};
 	}
