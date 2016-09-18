@@ -184,6 +184,20 @@ void DeleteTexture(TextureContext& textureContext)
 	afSafeDeleteVk(vkFreeMemory, textureContext.device, textureContext.memory);
 }
 
+void afDrawIndexed(int numIndices, int start, int instanceCount)
+{
+	assert(!start);
+	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
+	vkCmdDrawIndexed(commandBuffer, numIndices, instanceCount, 0, 0, 0);
+}
+
+void afDraw(int numVertices, int start, int instanceCount)
+{
+	assert(!start);
+	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
+	vkCmdDraw(commandBuffer, numVertices, instanceCount, 0, 0);
+}
+
 VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numBindings, const VkVertexInputBindingDescription bindings[], uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[])
 {
 	char path[MAX_PATH];

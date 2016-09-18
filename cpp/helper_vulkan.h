@@ -58,6 +58,9 @@ SRVID afCreateTexture2D(VkFormat format, const IVec2& size, void *image);
 SRVID afCreateTexture2D(AFDTFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
 void DeleteTexture(TextureContext& textureContext);
 
+void afDrawIndexed(int numIndices, int start = 0, int instanceCount = 1);
+void afDraw(int numVertices, int start = 0, int instanceCount = 1);
+
 inline void afSetTextureName(const TextureContext& tex, const char* name)
 {
 }

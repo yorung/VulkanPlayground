@@ -27,8 +27,8 @@ void Triangle::Draw()
 	VkDeviceSize offsets[1] = {};
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
 	vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
-	vkCmdDrawIndexed(commandBuffer, 3, 1, 0, 0, 0);
-//	vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+	afDrawIndexed(3);
+//	afDraw(3);
 }
 
 void Triangle::Create()
