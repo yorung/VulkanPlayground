@@ -20,6 +20,7 @@ VkResult _afHandleVKError(const char* file, const char* func, int line, const ch
 		return VK_SUCCESS;
 	}
 	aflog("%s %s(%d): %s %s\n", file, func, line, err, command);
+	assert(0);
 	return result;
 }
 
