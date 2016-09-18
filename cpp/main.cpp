@@ -65,6 +65,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE,
 			app.Create();
 		}
 		app.Update();
+		deviceMan.BeginScene();
 		app.Draw();
 		deviceMan.Present();
 		Sleep(1);

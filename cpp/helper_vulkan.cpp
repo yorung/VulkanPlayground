@@ -114,7 +114,7 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, int 
 	VkDeviceSize total = 0;
 	for (int i = 0; i < mipCount; i++)
 	{
-		copyInfo[i] = { total, datas[i].pitch, texDesc.size.y >> i,{ VK_IMAGE_ASPECT_COLOR_BIT, i, 0, 1 },{},{ texDesc.size.x >> i, texDesc.size.y >> i, 1 } };
+		copyInfo[i] = { total, datas[i].pitch, (uint32_t)texDesc.size.y >> i,{ VK_IMAGE_ASPECT_COLOR_BIT, (uint32_t)i, 0, 1 },{},{ (uint32_t)texDesc.size.x >> i, (uint32_t)texDesc.size.y >> i, 1 } };
 		total += datas[i].pitchSlice;
 	}
 
@@ -133,9 +133,19 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, int 
 	assert(mappedMemory);
 	for (int i = 0; i < mipCount; i++)
 	{
-		memcpy((uint8_t*)mappedMemory + copyInfo[i], datas[i].ptr, datas[i].pitchSlice);
+		memcpy((uint8_t*)mappedMemory + copyInfo[i].bufferOffset, datas[i].ptr, datas[i].pitchSlice);
 	}
 	vkUnmapMemory(device, stagingMemory);
+
+	VkCommandBuffer cmd = deviceMan.commandBuffer;
+	const VkImageMemoryBarrier undefToDest = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, textureContext.image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, (uint32_t)mipCount, 0, 1 } };
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &undefToDest);
+	vkCmdCopyBufferToImage(cmd, stagingBuffer, textureContext.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipCount, copyInfo);
+	const VkImageMemoryBarrier destToRead = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr, undefToDest.dstAccessMask, VK_ACCESS_SHADER_READ_BIT, undefToDest.newLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, textureContext.image,{ VK_IMAGE_ASPECT_COLOR_BIT, 0, (uint32_t)mipCount, 0, 1 } };
+	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &undefToDest);
+	deviceMan.Flush();
+	vkFreeMemory(device, stagingMemory, nullptr);
+	vkDestroyBuffer(device, stagingBuffer, nullptr);
 
 	//void* mappedMemory = nullptr;
 	//int size = datas[0].pitchSlice;
@@ -203,7 +213,7 @@ SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCou
 
 	if (datas)
 	{
-		afWriteTexture(textureContext, desc, int mipCount, datas);
+		afWriteTexture(textureContext, desc, mipCount, datas);
 	}
 	return textureContext;
 }
@@ -379,15 +389,13 @@ void DeviceManVK::Create(HWND hWnd)
 	viewport = { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 };
 	scissor = { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom };
 
-	BeginScene();
+	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 }
 
 void DeviceManVK::BeginScene()
 {
 	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &frameIndex));
-
-	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 
 	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f } };
 	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffers[frameIndex],{ {},{ (uint32_t)rc.right, (uint32_t)rc.bottom } }, arrayparam(clearValues) };
@@ -414,7 +422,8 @@ void DeviceManVK::Present()
 	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &frameIndex };
 	afHandleVKError(vkQueuePresentKHR(queue, &presentInfo));
 
-	BeginScene();
+	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 }
 
 void DeviceManVK::Destroy()
@@ -449,4 +458,21 @@ void DeviceManVK::Destroy()
 		vkDestroyInstance(inst, nullptr);
 		inst = nullptr;
 	}
+}
+
+void DeviceManVK::Flush()
+{
+	afHandleVKError(vkEndCommandBuffer(commandBuffer));
+
+	VkQueue queue = 0;
+	vkGetDeviceQueue(device, 0, 0, &queue);
+	assert(queue);
+
+	const VkSubmitInfo submitInfos[] = { { VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr, 0, nullptr, nullptr, 1, &commandBuffer } };
+	afHandleVKError(vkQueueSubmit(queue, arrayparam(submitInfos), 0));
+
+	afHandleVKError(vkQueueWaitIdle(queue));
+
+	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 }

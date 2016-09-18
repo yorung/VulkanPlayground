@@ -97,7 +97,6 @@ class DeviceManVK
 	RECT rc = {};
 	VkViewport viewport;
 	VkRect2D scissor;
-	void BeginScene();
 public:
 	VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 	VkPhysicalDevice physicalDevice = nullptr;
@@ -106,6 +105,8 @@ public:
 	void Create(HWND hWnd);
 	void Present();
 	void Destroy();
+	void BeginScene();
+	void Flush();
 	VkPipeline CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[]);
 };
 extern DeviceManVK deviceMan;
