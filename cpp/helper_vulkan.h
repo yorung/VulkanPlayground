@@ -1,9 +1,23 @@
-typedef VkFormat AFDTFormat;
-#define AFDT_INVALID VK_FORMAT_UNDEFINED
-#define AFDT_BC1_UNORM VK_FORMAT_BC1_RGBA_UNORM_BLOCK
-#define AFDT_BC2_UNORM VK_FORMAT_BC2_UNORM_BLOCK
-#define AFDT_BC3_UNORM VK_FORMAT_BC3_UNORM_BLOCK
-#define AFDT_R8G8B8A8_UNORM VK_FORMAT_R8G8B8A8_UNORM
+typedef VkFormat AFFFormat;
+#define AFF_INVALID VK_FORMAT_UNDEFINED
+#define AFF_BC1_UNORM VK_FORMAT_BC1_RGBA_UNORM_BLOCK
+#define AFF_BC2_UNORM VK_FORMAT_BC2_UNORM_BLOCK
+#define AFF_BC3_UNORM VK_FORMAT_BC3_UNORM_BLOCK
+#define AFF_R8G8B8A8_UNORM VK_FORMAT_R8G8B8A8_UNORM
+#define AFF_R32G32B32_FLOAT VK_FORMAT_R32G32B32_SFLOAT
+
+typedef VkVertexInputAttributeDescription InputElement;
+class CInputElement : public InputElement
+{
+public:
+	CInputElement(uint32_t location_, VkFormat format_, int offset_)
+	{
+		location = location_;
+		format = format_;
+		offset = offset_;
+		binding = 0;
+	}
+};
 
 VkResult _afHandleVKError(const char* file, const char* func, int line, const char* command, VkResult result);
 #define afHandleVKError(command) do{ _afHandleVKError(__FILE__, __FUNCTION__, __LINE__, #command, command); } while(0)
@@ -55,7 +69,7 @@ typedef TextureContext SRVID;
 SRVID afLoadTexture(const char* name, TexDesc& desc);
 SRVID LoadTextureViaOS(const char* name, IVec2& size);
 SRVID afCreateTexture2D(VkFormat format, const IVec2& size, void *image);
-SRVID afCreateTexture2D(AFDTFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
+SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
 void DeleteTexture(TextureContext& textureContext);
 
 void afDrawIndexed(int numIndices, int start = 0, int instanceCount = 1);

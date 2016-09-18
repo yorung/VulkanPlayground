@@ -9,10 +9,10 @@ struct TriangleVertex
 };
 
 static VkVertexInputBindingDescription bindings[] = { { 0, sizeof(TriangleVertex), VK_VERTEX_INPUT_RATE_VERTEX } };
-static VkVertexInputAttributeDescription attributes[] =
+static InputElement attributes[] =
 {
-	{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-	{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, 12 },
+	CInputElement(0, AFF_R32G32B32_FLOAT, 0),
+	CInputElement(1, AFF_R32G32B32_FLOAT, 12),
 };
 
 void Triangle::Draw()
