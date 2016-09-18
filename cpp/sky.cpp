@@ -36,7 +36,7 @@ void Sky::Create()
 	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, descriptorPool, arrayparam(descriptorSetLayouts) };
 	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSet));
 
-	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr, 0, nullptr);
+	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr);
 
 	uniformBuffer = afCreateUBO(sizeof(Mat));
 

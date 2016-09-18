@@ -8,7 +8,6 @@ struct TriangleVertex
 	Vec3 Color;
 };
 
-static VkVertexInputBindingDescription bindings[] = { { 0, sizeof(TriangleVertex), VK_VERTEX_INPUT_RATE_VERTEX } };
 static InputElement attributes[] =
 {
 	CInputElement(0, AFF_R32G32B32_FLOAT, 0),
@@ -48,7 +47,7 @@ void Triangle::Create()
 	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, descriptorPool, arrayparam(descriptorSetLayouts) };
 	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSet));
 
-	pipeline = deviceMan.CreatePipeline("solid", pipelineLayout, arrayparam(bindings), arrayparam(attributes));
+	pipeline = deviceMan.CreatePipeline("solid", pipelineLayout, arrayparam(attributes));
 
 	TriangleVertex vertexPositions[3];
 	for (int i = 0; i < 3; i++)

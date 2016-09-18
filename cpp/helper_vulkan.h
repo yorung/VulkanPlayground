@@ -106,6 +106,6 @@ public:
 	void Create(HWND hWnd);
 	void Present();
 	void Destroy();
-	VkPipeline CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numBindings, const VkVertexInputBindingDescription bindings[], uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[]);
+	VkPipeline CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[]);
 };
 extern DeviceManVK deviceMan;
