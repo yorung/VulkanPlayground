@@ -40,13 +40,13 @@ void Sky::Create()
 	uniformBuffer = afCreateUBO(sizeof(Mat));
 
 	TexDesc desc;
-	//pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr);
+	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr);
 	//texture = afLoadTexture("yangjae.dds", desc);
 	//texture = afLoadTexture("yangjae_mip.dds", desc);
-	//texture = afLoadTexture("hakodate.jpg", desc);
+	texture = afLoadTexture("hakodate.jpg", desc);
 
-	pipeline = deviceMan.CreatePipeline("sky_cubemap", pipelineLayout, 0, nullptr);
-	texture = afLoadTexture("cube.dds", desc);
+	//pipeline = deviceMan.CreatePipeline("sky_cubemap", pipelineLayout, 0, nullptr);
+	//texture = afLoadTexture("cube.dds", desc);
 
 	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, nullptr, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR };
 	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);
