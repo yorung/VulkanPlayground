@@ -52,16 +52,18 @@ static uint32_t GetCompatibleMemoryTypeIndex(const VkPhysicalDeviceMemoryPropert
 
 void afSafeDeleteBufer(BufferContext& buffer)
 {
+	if (buffer.memory)
+	{
+		vkUnmapMemory(buffer.device, buffer.memory);
+	}
 	afSafeDeleteVk(vkDestroyBuffer, buffer.device, buffer.buffer);
 	afSafeDeleteVk(vkFreeMemory, buffer.device, buffer.memory);
 }
 
 void WriteBuffer(BufferContext& buffer, int size, const void* srcData)
 {
-	void* mappedMemory = nullptr;
-	afHandleVKError(vkMapMemory(buffer.device, buffer.memory, 0, size, 0, &mappedMemory));
-	memcpy(mappedMemory, srcData, size);
-	vkUnmapMemory(buffer.device, buffer.memory);
+	assert(buffer.mappedMemory);
+	memcpy(buffer.mappedMemory, srcData, size);
 }
 
 VBOID afCreateVertexBuffer(int size, const void* srcData)
@@ -86,14 +88,15 @@ BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPh
 	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(memoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
 	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &buffer.memory));
 
+	afHandleVKError(vkBindBufferMemory(device, buffer.buffer, buffer.memory, 0));
+	afHandleVKError(vkMapMemory(device, buffer.memory, 0, size, 0, &buffer.mappedMemory));
+	buffer.size = size;
+
 	if (srcData)
 	{
 		WriteBuffer(buffer, size, srcData);
 	}
 
-	afHandleVKError(vkBindBufferMemory(device, buffer.buffer, buffer.memory, 0));
-
-	buffer.size = size;
 	return buffer;
 }
 
