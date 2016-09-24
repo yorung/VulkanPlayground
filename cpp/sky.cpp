@@ -29,13 +29,8 @@ void Sky::Create()
 	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(descriptorSetLayouts) };
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
-	const VkDescriptorPoolSize descriptorPoolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } };
-	const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, 1, arrayparam(descriptorPoolSizes) };
-	afHandleVKError(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
-
-	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, descriptorPool, arrayparam(descriptorSetLayouts) };
+	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, arrayparam(descriptorSetLayouts) };
 	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSet));
-
 
 	uniformBuffer = afCreateUBO(sizeof(Mat));
 
@@ -70,7 +65,6 @@ void Sky::Destroy()
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
 
-	afSafeDeleteVk(vkDestroyDescriptorPool, device, descriptorPool);
 	for (auto& it : descriptorSetLayouts)
 	{
 		afSafeDeleteVk(vkDestroyDescriptorSetLayout, device, it);

@@ -102,6 +102,7 @@ public:
 	VkPhysicalDevice physicalDevice = nullptr;
 	VkDevice GetDevice() { return device; }
 	VkCommandBuffer commandBuffer = 0;
+	VkDescriptorPool descriptorPool = 0;
 	void Create(HWND hWnd);
 	void Present();
 	void Destroy();

@@ -391,6 +391,11 @@ void DeviceManVK::Create(HWND hWnd)
 	viewport = { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 };
 	scissor = { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom };
 
+	static const uint32_t descriptorPoolSize = 10;
+	const VkDescriptorPoolSize descriptorPoolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorPoolSize },{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorPoolSize } };
+	const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, descriptorPoolSize, arrayparam(descriptorPoolSizes) };
+	afHandleVKError(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
+
 	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 }
@@ -430,6 +435,7 @@ void DeviceManVK::Present()
 
 void DeviceManVK::Destroy()
 {
+	afSafeDeleteVk(vkDestroyDescriptorPool, device, descriptorPool);
 	afSafeDeleteVk(vkDestroyPipelineCache, device, pipelineCache);
 	if (commandBuffer)
 	{
