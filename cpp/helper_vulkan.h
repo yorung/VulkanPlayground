@@ -32,6 +32,15 @@ inline void afSafeDeleteVk(Deleter deleter, VkDevice device, Object& object)
 	}
 }
 
+inline void afSafeUnmapVk(VkDevice device, VkDeviceMemory memory, void*& mappedMemory)
+{
+	if (mappedMemory)
+	{
+		vkUnmapMemory(device, memory);
+		mappedMemory = nullptr;
+	}
+}
+
 struct BufferContext
 {
 	VkDevice device = 0;

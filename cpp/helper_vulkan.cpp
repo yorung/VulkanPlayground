@@ -52,10 +52,7 @@ static uint32_t GetCompatibleMemoryTypeIndex(const VkPhysicalDeviceMemoryPropert
 
 void afSafeDeleteBufer(BufferContext& buffer)
 {
-	if (buffer.memory)
-	{
-		vkUnmapMemory(buffer.device, buffer.memory);
-	}
+	afSafeUnmapVk(buffer.device, buffer.memory, buffer.mappedMemory);
 	afSafeDeleteVk(vkDestroyBuffer, buffer.device, buffer.buffer);
 	afSafeDeleteVk(vkFreeMemory, buffer.device, buffer.memory);
 }
