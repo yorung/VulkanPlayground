@@ -79,21 +79,16 @@ BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPh
 	BufferContext buffer;
 	buffer.device = device;
 	afHandleVKError(vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer.buffer));
-
-	VkMemoryRequirements req = {};
-	vkGetBufferMemoryRequirements(device, buffer.buffer, &req);
-	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(memoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
+	vkGetBufferMemoryRequirements(device, buffer.buffer, &buffer.memoryRequirement);
+	const VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, buffer.memoryRequirement.size, GetCompatibleMemoryTypeIndex(memoryProperties, buffer.memoryRequirement.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
 	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &buffer.memory));
-
 	afHandleVKError(vkBindBufferMemory(device, buffer.buffer, buffer.memory, 0));
 	afHandleVKError(vkMapMemory(device, buffer.memory, 0, size, 0, &buffer.mappedMemory));
 	buffer.size = size;
-
 	if (srcData)
 	{
 		WriteBuffer(buffer, size, srcData);
 	}
-
 	return buffer;
 }
 

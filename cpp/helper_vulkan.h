@@ -48,6 +48,7 @@ struct BufferContext
 	VkDeviceMemory memory = 0;
 	VkDeviceSize size = 0;
 	void* mappedMemory = nullptr;
+	VkMemoryRequirements memoryRequirement = {};
 };
 
 void afSafeDeleteBufer(BufferContext& buffer);
