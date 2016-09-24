@@ -392,7 +392,7 @@ void DeviceManVK::Create(HWND hWnd)
 	scissor = { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom };
 
 	static const uint32_t descriptorPoolSize = 10;
-	const VkDescriptorPoolSize descriptorPoolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptorPoolSize },{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorPoolSize } };
+	const VkDescriptorPoolSize descriptorPoolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, descriptorPoolSize },{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorPoolSize } };
 	const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, descriptorPoolSize, arrayparam(descriptorPoolSizes) };
 	afHandleVKError(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
 
