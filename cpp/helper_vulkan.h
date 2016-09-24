@@ -49,6 +49,7 @@ struct BufferContext
 	VkDeviceSize size = 0;
 	void* mappedMemory = nullptr;
 	VkMemoryRequirements memoryRequirement = {};
+	bool operator !() { return !buffer; }
 };
 
 void afSafeDeleteBufer(BufferContext& buffer);
@@ -90,6 +91,18 @@ inline void afSetTextureName(const TextureContext& tex, const char* name)
 {
 }
 
+class AFBufferStackAllocator
+{
+	VkDeviceSize allocatedSize = 0;
+public:
+	BufferContext bufferContext;
+	void Create(VkBufferUsageFlags usage, int size);
+	uint32_t Allocate(int size, const void* data);
+	void ResetAllocation();
+	void Destroy();
+	~AFBufferStackAllocator() { assert(!bufferContext); }
+};
+
 class DeviceManVK
 {
 	VkDevice device = nullptr;
@@ -114,6 +127,7 @@ public:
 	VkDevice GetDevice() { return device; }
 	VkCommandBuffer commandBuffer = 0;
 	VkDescriptorPool descriptorPool = 0;
+	AFBufferStackAllocator uboAllocator;
 	void Create(HWND hWnd);
 	void Present();
 	void Destroy();

@@ -17,12 +17,11 @@ static InputElement attributes[] =
 void Triangle::Draw()
 {
 	Mat mat = q2m(Quat(Vec3(0, 0, 1), (float)GetTime()));
-	WriteBuffer(uniformBuffer, sizeof(mat), &mat);
+	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
+	uint32_t dynamicOffset = ubo.Allocate(sizeof(mat), &mat);
 
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-
-	uint32_t dynamicOffsets[1] = {};
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, arrayparam(dynamicOffsets));
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
 
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	VkDeviceSize offsets[1] = {};
@@ -57,18 +56,17 @@ void Triangle::Create()
 		};
 	}
 	vertexBuffer = afCreateVertexBuffer(sizeof(vertexPositions), vertexPositions);
-	uniformBuffer = afCreateUBO(sizeof(Mat));
 	unsigned short indexData[] = {0, 1, 2};
 	indexBuffer = CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(indexData), indexData);
 
-	VkDescriptorBufferInfo descriptorBufferInfo = { uniformBuffer.buffer, 0, uniformBuffer.size };
-	VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, nullptr, &descriptorBufferInfo } };
+	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
+	const VkDescriptorBufferInfo descriptorBufferInfo = { ubo.bufferContext.buffer, 0, sizeof(Mat) };
+	const VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, nullptr, &descriptorBufferInfo } };
 	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
 }
 
 void Triangle::Destroy()
 {
-	afSafeDeleteBufer(uniformBuffer);
 	afSafeDeleteBufer(indexBuffer);
 	afSafeDeleteBufer(vertexBuffer);
 	VkDevice device = deviceMan.GetDevice();

@@ -10,11 +10,11 @@ void Sky::Draw()
 	matV._41 = matV._42 = matV._43 = 0;
 	Mat invVP = inv(matV * matP);
 
-	WriteBuffer(uniformBuffer, sizeof(invVP), &invVP);
+	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
+	uint32_t dynamicOffset = ubo.Allocate(sizeof(invVP), &invVP);
 
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-	uint32_t dynamicOffsets[1] = {};
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, arrayparam(dynamicOffsets));
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
 
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	afDraw(4);
@@ -33,8 +33,6 @@ void Sky::Create()
 	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, arrayparam(descriptorSetLayouts) };
 	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSet));
 
-	uniformBuffer = afCreateUBO(sizeof(Mat));
-
 	TexDesc desc;
 	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr);
 	//texture = afLoadTexture("yangjae.dds", desc);
@@ -47,7 +45,8 @@ void Sky::Create()
 	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, nullptr, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR };
 	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);
 
-	const VkDescriptorBufferInfo descriptorBufferInfo = { uniformBuffer.buffer, 0, uniformBuffer.size };
+	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
+	const VkDescriptorBufferInfo descriptorBufferInfo = { ubo.bufferContext.buffer, 0, sizeof(Mat) };
 	const VkDescriptorImageInfo descriptorImageInfo = { sampler, texture.view, VK_IMAGE_LAYOUT_GENERAL };
 	const VkWriteDescriptorSet writeDescriptorSets[] =
 	{
@@ -60,7 +59,6 @@ void Sky::Create()
 void Sky::Destroy()
 {
 	DeleteTexture(texture);
-	afSafeDeleteBufer(uniformBuffer);
 	VkDevice device = deviceMan.GetDevice();
 	afSafeDeleteVk(vkDestroySampler, device, sampler);
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);

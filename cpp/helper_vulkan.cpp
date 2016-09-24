@@ -371,6 +371,8 @@ void DeviceManVK::Create(HWND hWnd)
 	const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, descriptorPoolSize, arrayparam(descriptorPoolSizes) };
 	afHandleVKError(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
 
+	uboAllocator.Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 1024);
+
 	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 }
@@ -400,6 +402,7 @@ void DeviceManVK::Present()
 	afHandleVKError(vkQueueSubmit(queue, arrayparam(submitInfos), 0));
 
 	afHandleVKError(vkQueueWaitIdle(queue));
+	uboAllocator.ResetAllocation();
 
 	const VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR, nullptr, 1, &semaphore, 1, &swapchain, &frameIndex };
 	afHandleVKError(vkQueuePresentKHR(queue, &presentInfo));
@@ -410,6 +413,7 @@ void DeviceManVK::Present()
 
 void DeviceManVK::Destroy()
 {
+	uboAllocator.Destroy();
 	afSafeDeleteVk(vkDestroyDescriptorPool, device, descriptorPool);
 	afSafeDeleteVk(vkDestroyPipelineCache, device, pipelineCache);
 	if (commandBuffer)
@@ -455,7 +459,36 @@ void DeviceManVK::Flush()
 	afHandleVKError(vkQueueSubmit(queue, arrayparam(submitInfos), 0));
 
 	afHandleVKError(vkQueueWaitIdle(queue));
+	uboAllocator.ResetAllocation();
 
 	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+}
+
+void AFBufferStackAllocator::Create(VkBufferUsageFlags usage, int size)
+{
+	bufferContext = CreateBuffer(deviceMan.GetDevice(), usage, deviceMan.physicalDeviceMemoryProperties, size, nullptr);
+	ResetAllocation();
+}
+
+uint32_t AFBufferStackAllocator::Allocate(int size, const void* data)
+{
+	const VkDeviceSize& align = bufferContext.memoryRequirement.alignment;
+	const uint32_t offset = (uint32_t)allocatedSize;
+	const VkDeviceSize sizeAligned = ((VkDeviceSize)size + align - 1) / align * align;
+	const VkDeviceSize afterAllocatedSize = allocatedSize + sizeAligned;
+	assert(afterAllocatedSize <= bufferContext.size);
+	allocatedSize = afterAllocatedSize;
+	memcpy((uint8_t*)bufferContext.mappedMemory + offset, data, size);
+	return offset;
+}
+
+void AFBufferStackAllocator::ResetAllocation()
+{
+	allocatedSize = 0;
+}
+
+void AFBufferStackAllocator::Destroy()
+{
+	afSafeDeleteBufer(bufferContext);
 }
