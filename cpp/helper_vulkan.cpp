@@ -122,41 +122,21 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, int 
 		total += datas[i].pitchSlice;
 	}
 
-	const VkBufferCreateInfo stagingBufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, total, VK_BUFFER_USAGE_TRANSFER_SRC_BIT };
-	VkBuffer stagingBuffer = 0;
 	VkDevice device = deviceMan.GetDevice();
-	afHandleVKError(vkCreateBuffer(device, &stagingBufferCreateInfo, nullptr, &stagingBuffer));
-	VkMemoryRequirements req = {};
-	vkGetBufferMemoryRequirements(device, stagingBuffer, &req);
-	VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, nullptr, req.size, GetCompatibleMemoryTypeIndex(deviceMan.physicalDeviceMemoryProperties, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) };
-	VkDeviceMemory stagingMemory = 0;
-	afHandleVKError(vkAllocateMemory(device, &memoryAllocateInfo, nullptr, &stagingMemory));
-	afHandleVKError(vkBindBufferMemory(device, stagingBuffer, stagingMemory, 0));
-	void* mappedMemory = nullptr;
-	afHandleVKError(vkMapMemory(device, stagingMemory, 0, total, 0, &mappedMemory));
-	assert(mappedMemory);
+	BufferContext staging = CreateBuffer(device, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, deviceMan.physicalDeviceMemoryProperties, (int)total, nullptr);
 	for (uint32_t i = 0; i < subResources; i++)
 	{
-		memcpy((uint8_t*)mappedMemory + copyInfo[i].bufferOffset, datas[i].ptr, datas[i].pitchSlice);
+		memcpy((uint8_t*)staging.mappedMemory + copyInfo[i].bufferOffset, datas[i].ptr, datas[i].pitchSlice);
 	}
-	vkUnmapMemory(device, stagingMemory);
 
 	VkCommandBuffer cmd = deviceMan.commandBuffer;
 	const VkImageMemoryBarrier undefToDest = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr, 0, VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, textureContext.image, { VK_IMAGE_ASPECT_COLOR_BIT, 0, (uint32_t)mipCount, 0, (texDesc.isCubeMap ? 6u : 1u) } };
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &undefToDest);
-	vkCmdCopyBufferToImage(cmd, stagingBuffer, textureContext.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subResources, copyInfo);
+	vkCmdCopyBufferToImage(cmd, staging.buffer, textureContext.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subResources, copyInfo);
 	const VkImageMemoryBarrier destToRead = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr, undefToDest.dstAccessMask, VK_ACCESS_SHADER_READ_BIT, undefToDest.newLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, textureContext.image,{ VK_IMAGE_ASPECT_COLOR_BIT, 0, (uint32_t)mipCount, 0, (texDesc.isCubeMap ? 6u : 1u) } };
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &undefToDest);
 	deviceMan.Flush();
-	vkFreeMemory(device, stagingMemory, nullptr);
-	vkDestroyBuffer(device, stagingBuffer, nullptr);
-
-	//void* mappedMemory = nullptr;
-	//int size = datas[0].pitchSlice;
-	//afHandleVKError(vkMapMemory(textureContext.device, textureContext.memory, 0, size, 0, &mappedMemory));
-	//assert(mappedMemory);
-	//memcpy(mappedMemory, datas[0].ptr, size);
-	//vkUnmapMemory(textureContext.device, textureContext.memory);
+	afSafeDeleteBufer(staging);
 }
 
 TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image)
