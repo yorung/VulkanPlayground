@@ -15,7 +15,7 @@ double GetTime()
 	auto now = std::chrono::high_resolution_clock::now();
 	return std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1>>>(now - start).count();
 }
-/*
+
 IBOID afCreateTiledPlaneIBO(int numTiles, int* numIndies)
 {
 	const int numVert = numTiles + 1;
@@ -40,7 +40,7 @@ IBOID afCreateTiledPlaneIBO(int numTiles, int* numIndies)
 		*numIndies = (int)indi.size();
 	}
 
-	return afCreateIndexBuffer(&indi[0], (int)indi.size());
+	return afCreateIndexBuffer((int)indi.size(), &indi[0]);
 }
 
 VBOID afCreateTiledPlaneVBO(int numTiles)
@@ -53,7 +53,7 @@ VBOID afCreateTiledPlaneVBO(int numTiles)
 	}
 	return afCreateVertexBuffer((int)v.size() * sizeof(v[0]), &v[0]);
 }
-*/
+
 struct DDSHeader {
 	uint32_t h3[3];
 	int h, w;
@@ -169,7 +169,7 @@ SRVID afLoadTexture(const char* name, TexDesc& desc)
 	afSetTextureName(tex, name);
 	return tex;
 }
-/*
+
 IBOID afCreateQuadListIndexBuffer(int numQuads)
 {
 	std::vector<AFIndex> indi;
@@ -182,7 +182,7 @@ IBOID afCreateQuadListIndexBuffer(int numQuads)
 		int vertIdx = i % 6;
 		indi[i] = rectIdx * 4 + tbl[vertIdx];
 	}
-	return afCreateIndexBuffer(&indi[0], numIndi);
+	return afCreateIndexBuffer(numIndi, &indi[0]);
 }
 
 void afVerify(bool ok)
@@ -194,4 +194,3 @@ void afVerify(bool ok)
 	while (strlen(" ")) {
 	}
 }
-*/
