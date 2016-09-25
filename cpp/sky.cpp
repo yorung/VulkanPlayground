@@ -46,7 +46,7 @@ void Sky::Create()
 	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);
 
 	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
-	const VkDescriptorBufferInfo descriptorBufferInfo = { ubo.bufferContext.buffer, 0, sizeof(Mat) };
+	const VkDescriptorBufferInfo descriptorBufferInfo = { ubo.bufferContext.buffer, 0, VK_WHOLE_SIZE };
 	const VkDescriptorImageInfo descriptorImageInfo = { sampler, texture.view, VK_IMAGE_LAYOUT_GENERAL };
 	const VkWriteDescriptorSet writeDescriptorSets[] =
 	{
