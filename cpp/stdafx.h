@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <chrono>
+#include <map>
 
 #include <stdlib.h>
 #include <malloc.h>
@@ -30,6 +32,9 @@
 #include "helper_text.h"
 #include "helper_vulkan.h"
 #include "matrix_man.h"
+#include "dib.h"
+#include "fps.h"
+#include "font_man.h"
 #include "dev_camera.h"
 #include "system_misc.h"
 #include "triangle.h"

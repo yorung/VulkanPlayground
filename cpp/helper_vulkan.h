@@ -8,6 +8,7 @@ typedef VkFormat AFFFormat;
 #define AFF_BC3_UNORM VK_FORMAT_BC3_UNORM_BLOCK
 #define AFF_R8G8B8A8_UNORM VK_FORMAT_R8G8B8A8_UNORM
 #define AFF_R32G32B32_FLOAT VK_FORMAT_R32G32B32_SFLOAT
+#define AFF_R32G32_FLOAT VK_FORMAT_R32G32_SFLOAT
 
 typedef VkVertexInputAttributeDescription InputElement;
 class CInputElement : public InputElement
@@ -55,7 +56,7 @@ struct BufferContext
 	bool operator !() { return !buffer; }
 };
 
-void afSafeDeleteBufer(BufferContext& buffer);
+void afSafeDeleteBuffer(BufferContext& buffer);
 void WriteBuffer(BufferContext& buffer, int size, const void* srcData);
 BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData);
 
@@ -65,6 +66,7 @@ typedef BufferContext UBOID;
 VBOID afCreateVertexBuffer(int size, const void* srcData);
 IBOID afCreateIndexBuffer(int numIndi, const AFIndex* indi);
 UBOID afCreateUBO(int size, const void* srcData = nullptr);
+IBOID afCreateQuadListIndexBuffer(int numQuads);
 
 struct AFTexSubresourceData
 {
@@ -88,7 +90,8 @@ SRVID afLoadTexture(const char* name, TexDesc& desc);
 SRVID LoadTextureViaOS(const char* name, IVec2& size);
 SRVID afCreateTexture2D(VkFormat format, const IVec2& size, void *image);
 SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
-void DeleteTexture(TextureContext& textureContext);
+void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, void *image);
+void afSafeDeleteTexture(TextureContext& textureContext);
 
 void afBindBuffer(VkPipelineLayout pipelineLayout, int size, const void* buf, int descritorSetIndex);
 void afBindTexture(VkPipelineLayout pipelineLayout, const TextureContext& textureContext, int descritorSetIndex);
@@ -101,6 +104,24 @@ void afDraw(int numVertices, int start = 0, int instanceCount = 1);
 inline void afSetTextureName(const TextureContext& tex, const char* name)
 {
 }
+
+class AFDynamicQuadListVertexBuffer
+{
+	VBOID vbo;
+	IBOID ibo;
+	UINT stride;
+	int vertexBufferSize;
+public:
+	~AFDynamicQuadListVertexBuffer() { Destroy(); }
+	void Create(int vertexSize_, int nQuad);
+	void Apply();
+	void Write(const void* buf, int size);
+	void Destroy()
+	{
+		afSafeDeleteBuffer(ibo);
+		afSafeDeleteBuffer(vbo);
+	}
+};
 
 class AFBufferStackAllocator
 {
@@ -148,6 +169,6 @@ public:
 	void Destroy();
 	void BeginScene();
 	void Flush();
-	VkPipeline CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[]);
+	VkPipeline CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[], BlendMode blendMode, VkPrimitiveTopology primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 };
 extern DeviceManVK deviceMan;

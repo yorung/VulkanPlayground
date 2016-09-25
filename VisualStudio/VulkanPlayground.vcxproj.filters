@@ -45,6 +45,15 @@
     <ClInclude Include="..\cpp\app.h">
       <Filter>cpp</Filter>
     </ClInclude>
+    <ClInclude Include="..\cpp\fps.h">
+      <Filter>cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cpp\font_man.h">
+      <Filter>cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cpp\dib.h">
+      <Filter>cpp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\cpp\helper_vulkan.cpp">
@@ -78,6 +87,15 @@
       <Filter>cpp</Filter>
     </ClCompile>
     <ClCompile Include="..\cpp\dev_camera.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cpp\fps.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cpp\font_man.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cpp\dib.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
   </ItemGroup>

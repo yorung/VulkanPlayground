@@ -207,7 +207,7 @@ SRVID LoadTextureViaOS(const char* name, IVec2& size)
 	}
 	return afCreateTexture2D(AFF_R8G8B8A8_UNORM, size, &col[0]);
 }
-/*
+
 #define IS_HANGUL(c)	( (c) >= 0xAC00 && (c) <= 0xD7A3 )
 #define IS_HANGUL2(c)	( ( (c) >= 0x3130 && (c) <= 0x318F ) || IS_HANGUL(c) )	// hangul + jamo
 
@@ -313,5 +313,4 @@ ComPtr<ID3DBlob> afCompileHLSL(const char* name, const char* entryPoint, const c
 	}
 	return blob;
 }
-*/
 #endif

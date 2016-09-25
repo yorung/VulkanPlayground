@@ -50,7 +50,7 @@ static uint32_t GetCompatibleMemoryTypeIndex(const VkPhysicalDeviceMemoryPropert
 	return -1;	// dummy
 }
 
-void afSafeDeleteBufer(BufferContext& buffer)
+void afSafeDeleteBuffer(BufferContext& buffer)
 {
 	afSafeUnmapVk(buffer.device, buffer.memory, buffer.mappedMemory);
 	afSafeDeleteVk(vkDestroyBuffer, buffer.device, buffer.buffer);
@@ -138,7 +138,20 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, int 
 	const VkImageMemoryBarrier destToRead = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr, undefToDest.dstAccessMask, VK_ACCESS_SHADER_READ_BIT, undefToDest.newLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, textureContext.image,{ VK_IMAGE_ASPECT_COLOR_BIT, 0, (uint32_t)mipCount, 0, (texDesc.isCubeMap ? 6u : 1u) } };
 	vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &undefToDest);
 	deviceMan.Flush();
-	afSafeDeleteBufer(staging);
+	afSafeDeleteBuffer(staging);
+}
+
+static void CreateTextureDescriptorSet(TextureContext& textureContext)
+{
+	VkDevice device = deviceMan.GetDevice();
+	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, 1, &deviceMan.commonTextureDescriptorSetLayout };
+	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &textureContext.descriptorSet));
+	const VkDescriptorImageInfo descriptorImageInfo = { deviceMan.sampler, textureContext.view, VK_IMAGE_LAYOUT_GENERAL };
+	const VkWriteDescriptorSet writeDescriptorSets[] =
+	{
+		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, textureContext.descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &descriptorImageInfo },
+	};
+	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
 }
 
 TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image)
@@ -163,6 +176,8 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 
 	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image, VK_IMAGE_VIEW_TYPE_2D, format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
 	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &textureContext.view));
+
+	CreateTextureDescriptorSet(textureContext);
 
 	TexDesc texDesc;
 	texDesc.size = size;
@@ -195,15 +210,7 @@ SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCou
 	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image,  (desc.isCubeMap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D), format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, (uint32_t)mipCount, 0, desc.isCubeMap ? 6u : 1u } };
 	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &textureContext.view));
 
-	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, 1, &deviceMan.commonTextureDescriptorSetLayout };
-	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &textureContext.descriptorSet));
-	const VkDescriptorImageInfo descriptorImageInfo = { deviceMan.sampler, textureContext.view, VK_IMAGE_LAYOUT_GENERAL };
-	const VkWriteDescriptorSet writeDescriptorSets[] =
-	{
-		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, textureContext.descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &descriptorImageInfo },
-	};
-	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
-
+	CreateTextureDescriptorSet(textureContext);
 	if (datas)
 	{
 		afWriteTexture(textureContext, desc, mipCount, datas);
@@ -211,7 +218,7 @@ SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCou
 	return textureContext;
 }
 
-void DeleteTexture(TextureContext& textureContext)
+void afSafeDeleteTexture(TextureContext& textureContext)
 {
 	if (textureContext.descriptorSet)
 	{
@@ -262,12 +269,36 @@ static uint32_t GetVkFormatSize(VkFormat format)
 	switch (format)
 	{
 	case VK_FORMAT_R32G32B32_SFLOAT: return 12;
+	case VK_FORMAT_R32G32_SFLOAT: return 8;
 	}
 	assert(0);
 	return 0;
 }
 
-VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[])
+void AFDynamicQuadListVertexBuffer::Create(int vertexSize_, int nQuad)
+{
+	Destroy();
+	stride = vertexSize_;
+	vertexBufferSize = nQuad * vertexSize_ * 4;
+	vbo = afCreateVertexBuffer(vertexBufferSize, nullptr);
+	ibo = afCreateQuadListIndexBuffer(nQuad);
+}
+
+void AFDynamicQuadListVertexBuffer::Apply()
+{
+	VkCommandBuffer cmd = deviceMan.commandBuffer;
+	VkDeviceSize offsets[1] = {};
+	vkCmdBindVertexBuffers(cmd, 0, 1, &vbo.buffer, offsets);
+	afSetIndexBuffer(ibo);
+}
+
+void AFDynamicQuadListVertexBuffer::Write(const void* buf, int size)
+{
+	assert(size <= vertexBufferSize);
+	memcpy(vbo.mappedMemory, buf, size);
+}
+
+VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[], BlendMode blendMode, VkPrimitiveTopology primitiveTopology)
 {
 	char path[MAX_PATH];
 	sprintf_s(path, sizeof(path), "%s.vert.spv", name);
@@ -278,13 +309,14 @@ VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipeli
 	std::for_each(attributes, attributes + numAttributes, [&](const VkVertexInputAttributeDescription& attr) { binding.stride += GetVkFormatSize(attr.format); assert(attr.binding == 0); });
 	const VkPipelineShaderStageCreateInfo shaderStageCreationInfos[] = { { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, vertexShader, "main" },{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, fragmentShader, "main" } };
 	const VkPipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, nullptr, 0, !!numAttributes, &binding, numAttributes, attributes };
-	const VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP };
+	const VkPipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, nullptr, 0, primitiveTopology };
 	const VkPipelineViewportStateCreateInfo viewportStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, nullptr, 0, 1, &viewport, 1, &scissor };
 	const VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, nullptr, 0, VK_FALSE, VK_FALSE, VK_POLYGON_MODE_FILL, VK_CULL_MODE_NONE, VK_FRONT_FACE_COUNTER_CLOCKWISE, VK_FALSE, 0, 0, 0, 1.0f };
 	const VkPipelineMultisampleStateCreateInfo multisampleStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO, nullptr, 0, VK_SAMPLE_COUNT_1_BIT };
 	const VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-	const VkPipelineColorBlendAttachmentState colorBlendAttachmentStates[] = { { VK_FALSE, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, 0xf } };
-	const VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0, VK_FALSE, VK_LOGIC_OP_CLEAR, arrayparam(colorBlendAttachmentStates) };
+	const VkPipelineColorBlendAttachmentState colorBlendAttachmentStateNone = { VK_FALSE, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, 0xf };
+	const VkPipelineColorBlendAttachmentState colorBlendAttachmentStateAlphaBlend = { VK_TRUE, VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, VK_BLEND_OP_ADD, VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO, VK_BLEND_OP_ADD, 0xf };
+	const VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr, 0, VK_FALSE, VK_LOGIC_OP_CLEAR, 1, blendMode == BM_ALPHA ? &colorBlendAttachmentStateAlphaBlend : &colorBlendAttachmentStateNone };
 	const VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 	const VkPipelineDynamicStateCreateInfo pipelineDynamicStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO, nullptr, 0, arrayparam(dynamicStates) };
 	const VkGraphicsPipelineCreateInfo graphicsPipelineCreateInfos[] = { { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, nullptr, 0, arrayparam(shaderStageCreationInfos), &pipelineVertexInputStateCreateInfo, &pipelineInputAssemblyStateCreateInfo, nullptr, &viewportStateCreateInfo, &rasterizationStateCreateInfo, &multisampleStateCreateInfo, &depthStencilStateCreateInfo, &colorBlendState, &pipelineDynamicStateCreateInfo, pipelineLayout, renderPass } };
@@ -515,6 +547,11 @@ void DeviceManVK::Destroy()
 
 void DeviceManVK::Flush()
 {
+	if (!commandBuffer)
+	{
+		return;
+	}
+
 	afHandleVKError(vkEndCommandBuffer(commandBuffer));
 
 	VkQueue queue = 0;
@@ -556,5 +593,5 @@ void AFBufferStackAllocator::ResetAllocation()
 
 void AFBufferStackAllocator::Destroy()
 {
-	afSafeDeleteBufer(bufferContext);
+	afSafeDeleteBuffer(bufferContext);
 }

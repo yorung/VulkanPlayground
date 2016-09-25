@@ -33,7 +33,7 @@ void Triangle::Create()
 	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &deviceMan.commonUboDescriptorSetLayout};
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
-	pipeline = deviceMan.CreatePipeline("solid", pipelineLayout, arrayparam(attributes));
+	pipeline = deviceMan.CreatePipeline("solid", pipelineLayout, arrayparam(attributes), BM_NONE);
 
 	TriangleVertex vertexPositions[3];
 	for (int i = 0; i < 3; i++)
@@ -51,8 +51,8 @@ void Triangle::Create()
 
 void Triangle::Destroy()
 {
-	afSafeDeleteBufer(indexBuffer);
-	afSafeDeleteBufer(vertexBuffer);
+	afSafeDeleteBuffer(indexBuffer);
+	afSafeDeleteBuffer(vertexBuffer);
 	VkDevice device = deviceMan.GetDevice();
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);

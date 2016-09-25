@@ -25,7 +25,7 @@ void Sky::Create()
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
 	TexDesc desc;
-	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr);
+	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr, BM_NONE);
 	//texture = afLoadTexture("yangjae.dds", desc);
 	texture = afLoadTexture("yangjae_mip.dds", desc);
 	//texture = afLoadTexture("hakodate.jpg", desc);
@@ -36,7 +36,7 @@ void Sky::Create()
 
 void Sky::Destroy()
 {
-	DeleteTexture(texture);
+	afSafeDeleteTexture(texture);
 	VkDevice device = deviceMan.GetDevice();
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include <random>
-#include <chrono>
 
 float Random()
 {

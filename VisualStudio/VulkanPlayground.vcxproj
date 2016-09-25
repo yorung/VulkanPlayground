@@ -159,6 +159,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\cpp\app.h" />
+    <ClInclude Include="..\cpp\dib.h" />
+    <ClInclude Include="..\cpp\font_man.h" />
+    <ClInclude Include="..\cpp\fps.h" />
     <ClInclude Include="..\cpp\helper.h" />
     <ClInclude Include="..\cpp\helper_vulkan.h" />
     <ClInclude Include="..\cpp\helper_win.h" />
@@ -171,6 +174,9 @@
   <ItemGroup>
     <ClCompile Include="..\cpp\app.cpp" />
     <ClCompile Include="..\cpp\dev_camera.cpp" />
+    <ClCompile Include="..\cpp\dib.cpp" />
+    <ClCompile Include="..\cpp\font_man.cpp" />
+    <ClCompile Include="..\cpp\fps.cpp" />
     <ClCompile Include="..\cpp\helper.cpp" />
     <ClCompile Include="..\cpp\helper_vulkan.cpp" />
     <ClCompile Include="..\cpp\helper_win.cpp" />
