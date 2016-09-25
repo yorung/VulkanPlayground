@@ -202,6 +202,14 @@ void DeleteTexture(TextureContext& textureContext)
 	afSafeDeleteVk(vkFreeMemory, textureContext.device, textureContext.memory);
 }
 
+void afBindBuffer(VkPipelineLayout pipelineLayout, int size, const void* buf, int descritorSetIndex)
+{
+	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
+	uint32_t dynamicOffset = ubo.Allocate(size, buf);
+	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descritorSetIndex, 1, &deviceMan.commonUboDescriptorSet, 1, &dynamicOffset);
+}
+
 void afDrawIndexed(int numIndices, int start, int instanceCount)
 {
 	assert(!start);

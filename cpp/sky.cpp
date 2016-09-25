@@ -9,14 +9,9 @@ void Sky::Draw()
 	matrixMan.Get(MatrixMan::PROJ, matP);
 	matV._41 = matV._42 = matV._43 = 0;
 	Mat invVP = inv(matV * matP);
-
-	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
-	uint32_t dynamicOffset = ubo.Allocate(sizeof(invVP), &invVP);
-
+	afBindBuffer(pipelineLayout, sizeof(invVP), &invVP, 0);
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &deviceMan.commonUboDescriptorSet, 1, &dynamicOffset);
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &textureDescriptorSet, 0, nullptr);
-
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	afDraw(4);
 }

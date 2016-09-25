@@ -17,12 +17,8 @@ static InputElement attributes[] =
 void Triangle::Draw()
 {
 	Mat mat = q2m(Quat(Vec3(0, 0, 1), (float)GetTime()));
-	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
-	uint32_t dynamicOffset = ubo.Allocate(sizeof(mat), &mat);
-
+	afBindBuffer(pipelineLayout, sizeof(mat), &mat, 0);
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &deviceMan.commonUboDescriptorSet, 1, &dynamicOffset);
-
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	VkDeviceSize offsets[1] = {};
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
