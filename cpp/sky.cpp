@@ -11,7 +11,7 @@ void Sky::Draw()
 	Mat invVP = inv(matV * matP);
 	afBindBuffer(pipelineLayout, sizeof(invVP), &invVP, 0);
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &textureDescriptorSet, 0, nullptr);
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &texture.descriptorSet, 0, nullptr);
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	afDraw(4);
 }
@@ -32,15 +32,6 @@ void Sky::Create()
 
 	//pipeline = deviceMan.CreatePipeline("sky_cubemap", pipelineLayout, 0, nullptr);
 	//texture = afLoadTexture("cube.dds", desc);
-
-	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, 1, &deviceMan.commonTextureDescriptorSetLayout };
-	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &textureDescriptorSet));
-	const VkDescriptorImageInfo descriptorImageInfo = { deviceMan.sampler, texture.view, VK_IMAGE_LAYOUT_GENERAL };
-	const VkWriteDescriptorSet writeDescriptorSets[] =
-	{
-		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, textureDescriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &descriptorImageInfo },
-	};
-	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
 }
 
 void Sky::Destroy()
@@ -49,9 +40,4 @@ void Sky::Destroy()
 	VkDevice device = deviceMan.GetDevice();
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
-	if (textureDescriptorSet)
-	{
-		afHandleVKError(vkFreeDescriptorSets(device, deviceMan.descriptorPool, 1, &textureDescriptorSet));
-		textureDescriptorSet = 0;
-	}
 }

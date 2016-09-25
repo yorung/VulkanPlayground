@@ -188,6 +188,15 @@ SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCou
 	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image,  (desc.isCubeMap ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D), format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, (uint32_t)mipCount, 0, desc.isCubeMap ? 6u : 1u } };
 	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &textureContext.view));
 
+	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, 1, &deviceMan.commonTextureDescriptorSetLayout };
+	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &textureContext.descriptorSet));
+	const VkDescriptorImageInfo descriptorImageInfo = { deviceMan.sampler, textureContext.view, VK_IMAGE_LAYOUT_GENERAL };
+	const VkWriteDescriptorSet writeDescriptorSets[] =
+	{
+		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, textureContext.descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &descriptorImageInfo },
+	};
+	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
+
 	if (datas)
 	{
 		afWriteTexture(textureContext, desc, mipCount, datas);
@@ -197,6 +206,11 @@ SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCou
 
 void DeleteTexture(TextureContext& textureContext)
 {
+	if (textureContext.descriptorSet)
+	{
+		afHandleVKError(vkFreeDescriptorSets(textureContext.device, deviceMan.descriptorPool, 1, &textureContext.descriptorSet));
+		textureContext.descriptorSet = 0;
+	}
 	afSafeDeleteVk(vkDestroyImageView, textureContext.device, textureContext.view);
 	afSafeDeleteVk(vkDestroyImage, textureContext.device, textureContext.image);
 	afSafeDeleteVk(vkFreeMemory, textureContext.device, textureContext.memory);
