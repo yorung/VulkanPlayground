@@ -133,6 +133,7 @@ public:
 	VkDescriptorSetLayout commonUboDescriptorSetLayout = 0;
 	VkDescriptorSetLayout commonTextureDescriptorSetLayout = 0;
 	VkDescriptorSet commonUboDescriptorSet = 0;
+	VkSampler sampler = 0;
 	void Create(HWND hWnd);
 	void Present();
 	void Destroy();

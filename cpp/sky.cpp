@@ -24,9 +24,6 @@ void Sky::Create()
 	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(layouts)};
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
-	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, 1, &deviceMan.commonTextureDescriptorSetLayout };
-	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &textureDescriptorSet));
-
 	TexDesc desc;
 	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr);
 	//texture = afLoadTexture("yangjae.dds", desc);
@@ -36,12 +33,9 @@ void Sky::Create()
 	//pipeline = deviceMan.CreatePipeline("sky_cubemap", pipelineLayout, 0, nullptr);
 	//texture = afLoadTexture("cube.dds", desc);
 
-	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, nullptr, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR };
-	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);
-
-	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
-	const VkDescriptorBufferInfo descriptorBufferInfo = { ubo.bufferContext.buffer, 0, VK_WHOLE_SIZE };
-	const VkDescriptorImageInfo descriptorImageInfo = { sampler, texture.view, VK_IMAGE_LAYOUT_GENERAL };
+	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, 1, &deviceMan.commonTextureDescriptorSetLayout };
+	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &textureDescriptorSet));
+	const VkDescriptorImageInfo descriptorImageInfo = { deviceMan.sampler, texture.view, VK_IMAGE_LAYOUT_GENERAL };
 	const VkWriteDescriptorSet writeDescriptorSets[] =
 	{
 		{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, textureDescriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, &descriptorImageInfo },
@@ -53,7 +47,6 @@ void Sky::Destroy()
 {
 	DeleteTexture(texture);
 	VkDevice device = deviceMan.GetDevice();
-	afSafeDeleteVk(vkDestroySampler, device, sampler);
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
 	if (textureDescriptorSet)

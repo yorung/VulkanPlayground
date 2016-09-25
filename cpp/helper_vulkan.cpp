@@ -395,6 +395,9 @@ void DeviceManVK::Create(HWND hWnd)
 	const VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, commonUboDescriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, nullptr, &descriptorBufferInfo } };
 	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
 
+	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, nullptr, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR };
+	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);
+
 	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
 }
@@ -435,6 +438,7 @@ void DeviceManVK::Present()
 
 void DeviceManVK::Destroy()
 {
+	afSafeDeleteVk(vkDestroySampler, device, sampler);
 	if (commonUboDescriptorSet)
 	{
 		afHandleVKError(vkFreeDescriptorSets(device, descriptorPool, 1, &commonUboDescriptorSet));
