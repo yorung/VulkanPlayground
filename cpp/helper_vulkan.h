@@ -128,6 +128,8 @@ public:
 	VkCommandBuffer commandBuffer = 0;
 	VkDescriptorPool descriptorPool = 0;
 	AFBufferStackAllocator uboAllocator;
+	VkDescriptorSetLayout commonUboDescriptorSetLayout = 0;
+	VkDescriptorSet commonUboDescriptorSet = 0;
 	void Create(HWND hWnd);
 	void Present();
 	void Destroy();

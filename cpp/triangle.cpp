@@ -21,7 +21,7 @@ void Triangle::Draw()
 	uint32_t dynamicOffset = ubo.Allocate(sizeof(mat), &mat);
 
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &deviceMan.commonUboDescriptorSet, 1, &dynamicOffset);
 
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	VkDeviceSize offsets[1] = {};
@@ -34,15 +34,8 @@ void Triangle::Draw()
 void Triangle::Create()
 {
 	VkDevice device = deviceMan.GetDevice();
-	const VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = { { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT } };
-	const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(descriptorSetLayoutBindings) };
-	afHandleVKError(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayouts[0]));
-
-	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(descriptorSetLayouts) };
+	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &deviceMan.commonUboDescriptorSetLayout};
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
-
-	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, arrayparam(descriptorSetLayouts) };
-	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSet));
 
 	pipeline = deviceMan.CreatePipeline("solid", pipelineLayout, arrayparam(attributes));
 
@@ -58,11 +51,6 @@ void Triangle::Create()
 	vertexBuffer = afCreateVertexBuffer(sizeof(vertexPositions), vertexPositions);
 	unsigned short indexData[] = {0, 1, 2};
 	indexBuffer = CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(indexData), indexData);
-
-	AFBufferStackAllocator& ubo = deviceMan.uboAllocator;
-	const VkDescriptorBufferInfo descriptorBufferInfo = { ubo.bufferContext.buffer, 0, VK_WHOLE_SIZE };
-	const VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, descriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, nullptr, &descriptorBufferInfo } };
-	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
 }
 
 void Triangle::Destroy()
@@ -70,11 +58,6 @@ void Triangle::Destroy()
 	afSafeDeleteBufer(indexBuffer);
 	afSafeDeleteBufer(vertexBuffer);
 	VkDevice device = deviceMan.GetDevice();
-	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
-
-	for (auto& it : descriptorSetLayouts)
-	{
-		afSafeDeleteVk(vkDestroyDescriptorSetLayout, device, it);
-	}
+	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 }
