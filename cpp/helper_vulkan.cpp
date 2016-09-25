@@ -381,9 +381,14 @@ void DeviceManVK::Create(HWND hWnd)
 
 	uboAllocator.Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 1024);
 
-	const VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = { { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT } };
-	const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(descriptorSetLayoutBindings) };
-	afHandleVKError(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &commonUboDescriptorSetLayout));
+	const VkDescriptorSetLayoutBinding textureDescriptorSetLayoutBindings[] = { { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT } };
+	const VkDescriptorSetLayoutCreateInfo textureDescriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(textureDescriptorSetLayoutBindings) };
+	afHandleVKError(vkCreateDescriptorSetLayout(device, &textureDescriptorSetLayoutCreateInfo, nullptr, &commonTextureDescriptorSetLayout));
+
+	const VkDescriptorSetLayoutBinding uboDescriptorSetLayoutBindings[] = { { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT } };
+	const VkDescriptorSetLayoutCreateInfo uboDescriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(uboDescriptorSetLayoutBindings) };
+	afHandleVKError(vkCreateDescriptorSetLayout(device, &uboDescriptorSetLayoutCreateInfo, nullptr, &commonUboDescriptorSetLayout));
+
 	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, descriptorPool, 1, &commonUboDescriptorSetLayout };
 	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &commonUboDescriptorSet));
 	const VkDescriptorBufferInfo descriptorBufferInfo = { uboAllocator.bufferContext.buffer, 0, VK_WHOLE_SIZE };
@@ -436,6 +441,7 @@ void DeviceManVK::Destroy()
 		commonUboDescriptorSet = 0;
 	}
 	afSafeDeleteVk(vkDestroyDescriptorSetLayout, device, commonUboDescriptorSetLayout);
+	afSafeDeleteVk(vkDestroyDescriptorSetLayout, device, commonTextureDescriptorSetLayout);
 	uboAllocator.Destroy();
 	afSafeDeleteVk(vkDestroyDescriptorPool, device, descriptorPool);
 	afSafeDeleteVk(vkDestroyPipelineCache, device, pipelineCache);

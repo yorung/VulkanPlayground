@@ -19,15 +19,12 @@ void Sky::Draw()
 void Sky::Create()
 {
 	VkDevice device = deviceMan.GetDevice();
-	const VkDescriptorSetLayoutBinding descriptorSetLayoutBindings[] = { { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT } };
-	const VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(descriptorSetLayoutBindings) };
-	afHandleVKError(vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &textureDescriptorSetLayout));
 
-	VkDescriptorSetLayout layouts[] = { deviceMan.commonUboDescriptorSetLayout, textureDescriptorSetLayout };
+	VkDescriptorSetLayout layouts[] = { deviceMan.commonUboDescriptorSetLayout, deviceMan.commonTextureDescriptorSetLayout };
 	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(layouts)};
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
-	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, 1, &textureDescriptorSetLayout };
+	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, deviceMan.descriptorPool, 1, &deviceMan.commonTextureDescriptorSetLayout };
 	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &textureDescriptorSet));
 
 	TexDesc desc;
@@ -59,7 +56,6 @@ void Sky::Destroy()
 	afSafeDeleteVk(vkDestroySampler, device, sampler);
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
-	afSafeDeleteVk(vkDestroyDescriptorSetLayout, device, textureDescriptorSetLayout);
 	if (textureDescriptorSet)
 	{
 		afHandleVKError(vkFreeDescriptorSets(device, deviceMan.descriptorPool, 1, &textureDescriptorSet));
