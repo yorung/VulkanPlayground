@@ -78,6 +78,7 @@ struct AFTexSubresourceData
 struct TextureContext
 {
 	VkDevice device = 0;
+	VkFormat format = VK_FORMAT_UNDEFINED;
 	VkImage image = 0;
 	VkDeviceMemory memory = 0;
 	VkImageView view = 0;
@@ -145,6 +146,7 @@ class DeviceManVK
 	VkImage swapChainImages[8] = {};
 	VkImageView imageViews[8] = {};
 	VkFramebuffer framebuffers[8] = {};
+	TextureContext depthStencil;
 	VkSemaphore semaphore = 0;
 	VkCommandPool commandPool = 0;
 	VkRenderPass renderPass = 0;

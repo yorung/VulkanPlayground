@@ -154,6 +154,16 @@ static void CreateTextureDescriptorSet(TextureContext& textureContext)
 	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
 }
 
+static VkImageAspectFlags FormatToAspectFlags(VkFormat format)
+{
+	switch (format)
+	{
+	case VK_FORMAT_D24_UNORM_S8_UINT:
+		return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	}
+	return VK_IMAGE_ASPECT_COLOR_BIT;
+}
+
 TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image)
 {
 	VkFormatProperties formatProperties;
@@ -164,6 +174,7 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 
 	TextureContext textureContext;
 	textureContext.device = device;
+	textureContext.format = format;
 	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_PREINITIALIZED };
 	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
 
@@ -174,10 +185,13 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 
 	afHandleVKError(vkBindImageMemory(device, textureContext.image, textureContext.memory, 0));
 
-	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image, VK_IMAGE_VIEW_TYPE_2D, format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+	VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, textureContext.image, VK_IMAGE_VIEW_TYPE_2D, format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }, { FormatToAspectFlags(format), 0, 1, 0, 1 } };
 	afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &textureContext.view));
 
-	CreateTextureDescriptorSet(textureContext);
+	if (format != VK_FORMAT_D24_UNORM_S8_UINT)
+	{
+		CreateTextureDescriptorSet(textureContext);
+	}
 
 	TexDesc texDesc;
 	texDesc.size = size;
@@ -197,6 +211,7 @@ SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCou
 	TextureContext textureContext;
 	VkDevice device = deviceMan.GetDevice();
 	textureContext.device = device;
+	textureContext.format = format;
 	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, (desc.isCubeMap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u), VK_IMAGE_TYPE_2D, format,{ (uint32_t)desc.size.x, (uint32_t)desc.size.y, 1 }, (uint32_t)mipCount, desc.isCubeMap ? 6u : 1u, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_UNDEFINED };
 	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
 
@@ -362,109 +377,98 @@ void DeviceManVK::Create(HWND hWnd)
 	const VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, arrayparam(deviceExtensions), &features };
 	afHandleVKError(vkCreateDevice(physicalDevice, &devInfo, nullptr, &device));
 
-	const VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, nullptr, 0, GetModuleHandle(nullptr), hWnd };
-	afHandleVKError(vkCreateWin32SurfaceKHR(inst, &surfaceInfo, nullptr, &surface));
-
-	uint32_t numSurfaceFormats = 0;
-	VkSurfaceFormatKHR surfaceFormats[32] = {};
-	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &numSurfaceFormats, nullptr));
-	assert(numSurfaceFormats <= _countof(surfaceFormats));
-	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &numSurfaceFormats, surfaceFormats));
-
-	uint32_t numPresentModes = 0;
-	VkPresentModeKHR presentModes[32] = {};
-	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, nullptr));
-	assert(numPresentModes <= _countof(presentModes));
-	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, presentModes));
-
-	VkSurfaceCapabilitiesKHR surfaceCaps = {};
-	afHandleVKError(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
-
-	VkBool32 physicalDeviceSurfaceSupport = VK_FALSE;
-	afHandleVKError(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, 0, surface, &physicalDeviceSurfaceSupport));
-	assert(physicalDeviceSurfaceSupport);
-
-	GetClientRect(hWnd, &rc);
-	const VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace,{ uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
-	afHandleVKError(vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain));
-
-	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr));
-	assert(swapChainCount <= _countof(swapChainImages));
-	assert(swapChainCount <= _countof(imageViews));
-	assert(swapChainCount <= _countof(framebuffers));
-	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, swapChainImages));
-
-	const VkAttachmentReference colorAttachmentReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-	const VkSubpassDescription subpassDescriptions[] = { { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &colorAttachmentReference } };
-	const VkAttachmentDescription attachments[1] = { { 0, swapchainInfo.imageFormat, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR } };
-	const VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, arrayparam(attachments), arrayparam(subpassDescriptions) };
-	afHandleVKError(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
-
-	for (int i = 0; i < (int)swapChainCount; i++)
-	{
-		const VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, swapChainImages[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormats[0].format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
-		afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageViews[i]));
-
-		const VkImageView frameBufferAttachmentImageView[1] = { { imageViews[i] } };
-		assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
-		const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, arrayparam(frameBufferAttachmentImageView), (uint32_t)rc.right, (uint32_t)rc.bottom, 1 };
-		afHandleVKError(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffers[i]));
-	}
-
-	const VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
-	afHandleVKError(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool));
-
-	const VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
-	afHandleVKError(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer));
-
-	const VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-	afHandleVKError(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
-
+	// query properties
 	uint32_t numQueueFamilyProperties = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &numQueueFamilyProperties, nullptr);
 	VkQueueFamilyProperties queueFamilyProperties[2];
 	assert(numQueueFamilyProperties == _countof(queueFamilyProperties));
 	vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &numQueueFamilyProperties, queueFamilyProperties);
 	assert(queueFamilyProperties[0].queueFlags & VK_QUEUE_GRAPHICS_BIT);
-
 	VkPhysicalDeviceFeatures physicalDeviceFeatures;
 	vkGetPhysicalDeviceFeatures(physicalDevice, &physicalDeviceFeatures);
 	VkPhysicalDeviceProperties physicalDeviceProperties;
 	vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemoryProperties);
 
-	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-	afHandleVKError(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
-
-	viewport = { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 };
-	scissor = { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom };
-
+	// preallocated resources and descriptors
+	uboAllocator.Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 1024);
 	static const uint32_t descriptorPoolSize = 10;
 	const VkDescriptorPoolSize descriptorPoolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, descriptorPoolSize },{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorPoolSize } };
 	const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, descriptorPoolSize, arrayparam(descriptorPoolSizes) };
 	afHandleVKError(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
-
-	uboAllocator.Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 1024);
-
 	const VkDescriptorSetLayoutBinding textureDescriptorSetLayoutBindings[] = { { 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT } };
 	const VkDescriptorSetLayoutCreateInfo textureDescriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(textureDescriptorSetLayoutBindings) };
 	afHandleVKError(vkCreateDescriptorSetLayout(device, &textureDescriptorSetLayoutCreateInfo, nullptr, &commonTextureDescriptorSetLayout));
-
 	const VkDescriptorSetLayoutBinding uboDescriptorSetLayoutBindings[] = { { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT } };
 	const VkDescriptorSetLayoutCreateInfo uboDescriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(uboDescriptorSetLayoutBindings) };
 	afHandleVKError(vkCreateDescriptorSetLayout(device, &uboDescriptorSetLayoutCreateInfo, nullptr, &commonUboDescriptorSetLayout));
-
 	const VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, descriptorPool, 1, &commonUboDescriptorSetLayout };
 	afHandleVKError(vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &commonUboDescriptorSet));
 	const VkDescriptorBufferInfo descriptorBufferInfo = { uboAllocator.bufferContext.buffer, 0, VK_WHOLE_SIZE };
 	const VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, commonUboDescriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, nullptr, &descriptorBufferInfo } };
 	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
-
 	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, nullptr, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR };
 	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);
+	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+	afHandleVKError(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
 
+	// command buffer
+	const VkCommandPoolCreateInfo commandPoolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, nullptr, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT };
+	afHandleVKError(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &commandPool));
+	const VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, nullptr, commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+	afHandleVKError(vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer));
+	const VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+	afHandleVKError(vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore));
 	const VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	afHandleVKError(vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo));
+
+	// Windows
+	const VkWin32SurfaceCreateInfoKHR surfaceInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR, nullptr, 0, GetModuleHandle(nullptr), hWnd };
+	afHandleVKError(vkCreateWin32SurfaceKHR(inst, &surfaceInfo, nullptr, &surface));
+	uint32_t numSurfaceFormats = 0;
+	VkSurfaceFormatKHR surfaceFormats[32] = {};
+	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &numSurfaceFormats, nullptr));
+	assert(numSurfaceFormats <= _countof(surfaceFormats));
+	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &numSurfaceFormats, surfaceFormats));
+	uint32_t numPresentModes = 0;
+	VkPresentModeKHR presentModes[32] = {};
+	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, nullptr));
+	assert(numPresentModes <= _countof(presentModes));
+	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, presentModes));
+	VkSurfaceCapabilitiesKHR surfaceCaps = {};
+	afHandleVKError(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
+	VkBool32 physicalDeviceSurfaceSupport = VK_FALSE;
+	afHandleVKError(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, 0, surface, &physicalDeviceSurfaceSupport));
+	assert(physicalDeviceSurfaceSupport);
+	GetClientRect(hWnd, &rc);
+	const VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace,{ uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
+	afHandleVKError(vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain));
+	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr));
+	assert(swapChainCount <= _countof(swapChainImages));
+	assert(swapChainCount <= _countof(imageViews));
+	assert(swapChainCount <= _countof(framebuffers));
+	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, swapChainImages));
+
+	// depth stencil(WIP)
+	//depthStencil = afCreateTexture2D(VK_FORMAT_D24_UNORM_S8_UINT, IVec2(rc.right, rc.bottom), nullptr);
+
+	// render pass
+	const VkAttachmentReference colorAttachmentReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+	const VkSubpassDescription subpassDescriptions[] = { { 0, VK_PIPELINE_BIND_POINT_GRAPHICS, 0, nullptr, 1, &colorAttachmentReference } };
+	const VkAttachmentDescription attachments[1] = { { 0, swapchainInfo.imageFormat, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR } };
+	const VkRenderPassCreateInfo renderPassInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, nullptr, 0, arrayparam(attachments), arrayparam(subpassDescriptions) };
+	afHandleVKError(vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass));
+	for (int i = 0; i < (int)swapChainCount; i++)
+	{
+		const VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, nullptr, 0, swapChainImages[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormats[0].format,{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+		afHandleVKError(vkCreateImageView(device, &imageViewCreateInfo, nullptr, &imageViews[i]));
+		const VkImageView frameBufferAttachmentImageView[1] = { { imageViews[i] } };
+		assert(_countof(frameBufferAttachmentImageView) == renderPassInfo.attachmentCount);
+		const VkFramebufferCreateInfo framebufferInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, nullptr, 0, renderPass, arrayparam(frameBufferAttachmentImageView), (uint32_t)rc.right, (uint32_t)rc.bottom, 1 };
+		afHandleVKError(vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffers[i]));
+	}
+	viewport = { 0, 0, (float)rc.right, (float)rc.bottom, 0, 1 };
+	scissor = { 0, 0, (uint32_t)rc.right, (uint32_t)rc.bottom };
 }
 
 void DeviceManVK::BeginScene()
@@ -520,6 +524,7 @@ void DeviceManVK::Destroy()
 		commandBuffer = 0;
 	}
 	afSafeDeleteVk(vkDestroySemaphore, device, semaphore);
+	afSafeDeleteTexture(depthStencil);
 	for (auto& it : imageViews)
 	{
 		afSafeDeleteVk(vkDestroyImageView, device, it);
