@@ -376,7 +376,7 @@ void DeviceManVK::Create(HWND hWnd)
 
 	static const uint32_t descriptorPoolSize = 10;
 	const VkDescriptorPoolSize descriptorPoolSizes[2] = { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, descriptorPoolSize },{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptorPoolSize } };
-	const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, 0, descriptorPoolSize, arrayparam(descriptorPoolSizes) };
+	const VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, nullptr, VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, descriptorPoolSize, arrayparam(descriptorPoolSizes) };
 	afHandleVKError(vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool));
 
 	uboAllocator.Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 1024);
@@ -430,7 +430,11 @@ void DeviceManVK::Present()
 
 void DeviceManVK::Destroy()
 {
-	commonUboDescriptorSet = 0;
+	if (commonUboDescriptorSet)
+	{
+		afHandleVKError(vkFreeDescriptorSets(device, descriptorPool, 1, &commonUboDescriptorSet));
+		commonUboDescriptorSet = 0;
+	}
 	afSafeDeleteVk(vkDestroyDescriptorSetLayout, device, commonUboDescriptorSetLayout);
 	uboAllocator.Destroy();
 	afSafeDeleteVk(vkDestroyDescriptorPool, device, descriptorPool);

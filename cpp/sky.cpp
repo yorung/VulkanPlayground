@@ -60,5 +60,9 @@ void Sky::Destroy()
 	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
 	afSafeDeleteVk(vkDestroyDescriptorSetLayout, device, textureDescriptorSetLayout);
-	textureDescriptorSet = 0;
+	if (textureDescriptorSet)
+	{
+		afHandleVKError(vkFreeDescriptorSets(device, deviceMan.descriptorPool, 1, &textureDescriptorSet));
+		textureDescriptorSet = 0;
+	}
 }
