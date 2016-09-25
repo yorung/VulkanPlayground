@@ -22,7 +22,7 @@ void Triangle::Draw()
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	VkDeviceSize offsets[1] = {};
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
-	vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT16);
+	afSetIndexBuffer(indexBuffer);
 	afDrawIndexed(3);
 //	afDraw(3);
 }
@@ -44,9 +44,9 @@ void Triangle::Create()
 			Vec3(i == 0, i == 1, i == 2),
 		};
 	}
+	const unsigned short indexData[] = { 0, 1, 2 };
 	vertexBuffer = afCreateVertexBuffer(sizeof(vertexPositions), vertexPositions);
-	unsigned short indexData[] = {0, 1, 2};
-	indexBuffer = CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, sizeof(indexData), indexData);
+	indexBuffer = afCreateIndexBuffer(arrayparam(indexData));
 }
 
 void Triangle::Destroy()

@@ -10,8 +10,8 @@ void Sky::Draw()
 	matV._41 = matV._42 = matV._43 = 0;
 	Mat invVP = inv(matV * matP);
 	afBindBuffer(pipelineLayout, sizeof(invVP), &invVP, 0);
+	afBindTexture(pipelineLayout, texture, 1);
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &texture.descriptorSet, 0, nullptr);
 	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	afDraw(4);
 }

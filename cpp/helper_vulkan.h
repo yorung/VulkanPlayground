@@ -1,3 +1,6 @@
+typedef unsigned short AFIndex;
+#define AFIndexTypeToDevice VK_INDEX_TYPE_UINT16
+
 typedef VkFormat AFFFormat;
 #define AFF_INVALID VK_FORMAT_UNDEFINED
 #define AFF_BC1_UNORM VK_FORMAT_BC1_RGBA_UNORM_BLOCK
@@ -57,8 +60,10 @@ void WriteBuffer(BufferContext& buffer, int size, const void* srcData);
 BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData);
 
 typedef BufferContext VBOID;
+typedef BufferContext IBOID;
 typedef BufferContext UBOID;
 VBOID afCreateVertexBuffer(int size, const void* srcData);
+IBOID afCreateIndexBuffer(int numIndi, const AFIndex* indi);
 UBOID afCreateUBO(int size, const void* srcData = nullptr);
 
 struct AFTexSubresourceData
@@ -86,6 +91,9 @@ SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCou
 void DeleteTexture(TextureContext& textureContext);
 
 void afBindBuffer(VkPipelineLayout pipelineLayout, int size, const void* buf, int descritorSetIndex);
+void afBindTexture(VkPipelineLayout pipelineLayout, const TextureContext& textureContext, int descritorSetIndex);
+
+void afSetIndexBuffer(IBOID id);
 
 void afDrawIndexed(int numIndices, int start = 0, int instanceCount = 1);
 void afDraw(int numVertices, int start = 0, int instanceCount = 1);

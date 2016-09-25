@@ -68,6 +68,13 @@ VBOID afCreateVertexBuffer(int size, const void* srcData)
 	return CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, srcData);
 }
 
+IBOID afCreateIndexBuffer(int numIndi, const AFIndex* indi)
+{
+	assert(indi);
+	int size = numIndi * sizeof(AFIndex);
+	return CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, indi);
+}
+
 UBOID afCreateUBO(int size, const void* srcData)
 {
 	return CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, srcData);
@@ -222,6 +229,18 @@ void afBindBuffer(VkPipelineLayout pipelineLayout, int size, const void* buf, in
 	uint32_t dynamicOffset = ubo.Allocate(size, buf);
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descritorSetIndex, 1, &deviceMan.commonUboDescriptorSet, 1, &dynamicOffset);
+}
+
+void afBindTexture(VkPipelineLayout pipelineLayout, const TextureContext& textureContext, int descritorSetIndex)
+{
+	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
+	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descritorSetIndex, 1, &textureContext.descriptorSet, 0, nullptr);
+}
+
+void afSetIndexBuffer(IBOID indexBuffer)
+{
+	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
+	vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, AFIndexTypeToDevice);
 }
 
 void afDrawIndexed(int numIndices, int start, int instanceCount)
