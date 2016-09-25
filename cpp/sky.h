@@ -4,8 +4,8 @@ class Sky
 	VkSampler sampler = 0;
 	VkPipelineLayout pipelineLayout = 0;
 	VkPipeline pipeline = 0;
-	VkDescriptorSetLayout descriptorSetLayouts[1] = {};
-	VkDescriptorSet descriptorSet = 0;
+	VkDescriptorSetLayout textureDescriptorSetLayout = 0;
+	VkDescriptorSet textureDescriptorSet = 0;
 public:
 	void Create();
 	void Draw();

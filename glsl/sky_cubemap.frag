@@ -7,7 +7,7 @@ layout (std140, binding = 0, row_major) uniform inst
 {
 	mat4 invVP;
 };
-layout (binding = 1) uniform samplerCube tex;
+layout (set = 1, binding = 0) uniform samplerCube tex;
 
 void main()
 {
