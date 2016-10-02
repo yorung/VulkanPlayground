@@ -171,6 +171,6 @@ public:
 	void Destroy();
 	void BeginScene();
 	void Flush();
-	VkPipeline CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[], BlendMode blendMode, VkPrimitiveTopology primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+	VkPipeline CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[], BlendMode blendMode, DepthStencilMode depthStencilMode, VkPrimitiveTopology primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 };
 extern DeviceManVK deviceMan;

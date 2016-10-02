@@ -15,8 +15,8 @@ void App::Draw()
 	Mat proj = perspectiveLH(45.0f * (float)M_PI / 180.0f, aspect, n, f);
 	matrixMan.Set(MatrixMan::PROJ, proj);
 
-	sky.Draw();
 	triangle.Draw();
+	sky.Draw();
 	fontMan.Render();
 }
 

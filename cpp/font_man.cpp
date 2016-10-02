@@ -56,7 +56,7 @@ void FontMan::Create()
 	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(layouts) };
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
-	pipeline = deviceMan.CreatePipeline("font", pipelineLayout, arrayparam(elements), BM_ALPHA, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	pipeline = deviceMan.CreatePipeline("font", pipelineLayout, arrayparam(elements), BM_ALPHA, DSM_DISABLE, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 //	renderStates.Create("font", arrayparam(elements), BM_ALPHA, DSM_DISABLE, CM_DISABLE, arrayparam(samplers), PT_TRIANGLELIST);
 	quadListVertexBuffer.Create(sizeof(FontVertex), SPRITE_MAX);
 }
