@@ -1,7 +1,7 @@
 typedef unsigned short AFIndex;
 #define AFIndexTypeToDevice VK_INDEX_TYPE_UINT16
 
-typedef VkFormat AFFFormat;
+typedef VkFormat AFFormat;
 #define AFF_INVALID VK_FORMAT_UNDEFINED
 #define AFF_BC1_UNORM VK_FORMAT_BC1_RGBA_UNORM_BLOCK
 #define AFF_BC2_UNORM VK_FORMAT_BC2_UNORM_BLOCK
@@ -90,7 +90,7 @@ typedef TextureContext SRVID;
 SRVID afLoadTexture(const char* name, TexDesc& desc);
 SRVID LoadTextureViaOS(const char* name, IVec2& size);
 SRVID afCreateTexture2D(VkFormat format, const IVec2& size, void *image);
-SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
+SRVID afCreateTexture2D(AFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
 void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, void *image);
 void afSafeDeleteTexture(TextureContext& textureContext);
 

@@ -106,7 +106,7 @@ static SRVID LoadDDSTexture(const char* name, TexDesc& texDesc)
 	}
 	const DDSHeader* hdr = (DDSHeader*)img;
 
-	AFFFormat format = AFF_INVALID;
+	AFFormat format = AFF_INVALID;
 	int(*pitchCalcurator)(int, int) = nullptr;
 	switch (hdr->fourcc) {
 	case 0x31545844: //'1TXD':

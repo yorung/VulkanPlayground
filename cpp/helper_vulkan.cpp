@@ -207,7 +207,7 @@ TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image
 	return textureContext;
 }
 
-SRVID afCreateTexture2D(AFFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[])
+SRVID afCreateTexture2D(AFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[])
 {
 	VkFormatProperties formatProperties;
 	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, format, &formatProperties);
