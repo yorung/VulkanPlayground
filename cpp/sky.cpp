@@ -25,7 +25,7 @@ void Sky::Create()
 	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
 
 	TexDesc desc;
-	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr, BM_NONE, DSM_DEPTH_CLOSEREQUAL_READONLY);
+	pipeline = deviceMan.CreatePipeline("sky_photosphere", pipelineLayout, 0, nullptr, AFRS_DEPTH_CLOSEREQUAL_READONLY);
 	//texture = afLoadTexture("yangjae.dds", desc);
 	texture = afLoadTexture("yangjae_mip.dds", desc);
 	//texture = afLoadTexture("hakodate.jpg", desc);
