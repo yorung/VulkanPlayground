@@ -49,24 +49,14 @@ void FontMan::Create()
 	}
 	texture = afCreateTexture2D(AFF_R8G8B8A8_UNORM, IVec2(TEX_W, TEX_H), nullptr);
 	afSetTextureName(texture, __FUNCTION__);
-
-	VkDevice device = deviceMan.GetDevice();
-
-	VkDescriptorSetLayout layouts[] = { deviceMan.commonTextureDescriptorSetLayout };
-	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(layouts) };
-	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
-
-	pipeline = deviceMan.CreatePipeline("font", pipelineLayout, arrayparam(elements), AFRS_ALPHA_BLEND | AFRS_PRIMITIVE_TRIANGLELIST);
-//	renderStates.Create("font", arrayparam(elements), BM_ALPHA, DSM_DISABLE, CM_DISABLE, arrayparam(samplers), PT_TRIANGLELIST);
+	renderStates.Create("font", arrayparam(elements), AFRS_ALPHA_BLEND | AFRS_PRIMITIVE_TRIANGLELIST);
 	quadListVertexBuffer.Create(sizeof(FontVertex), SPRITE_MAX);
 }
 
 void FontMan::Destroy()
 {
 	afSafeDeleteTexture(texture);
-	VkDevice device = deviceMan.GetDevice();
-	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
-	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
+	renderStates.Destroy();
 	texSrc.Destroy();
 	quadListVertexBuffer.Destroy();
 	ClearCache();
@@ -154,13 +144,10 @@ void FontMan::Render()
 			verts[i * 4 + j].coord = (cc.srcPos + fontVertAlign[j] * cc.desc.srcWidth) / Vec2(TEX_W, TEX_H);
 		}
 	}
-
-	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-	quadListVertexBuffer.Write(verts, 4 * numSprites * sizeof(FontVertex));
+	renderStates.Apply();
 	quadListVertexBuffer.Apply();
-	afBindTexture(pipelineLayout, texture, 0);
+	quadListVertexBuffer.Write(verts, 4 * numSprites * sizeof(FontVertex));
+	afBindTexture(texture, 0);
 	afDrawIndexed(numSprites * 6);
 	numSprites = 0;
 }

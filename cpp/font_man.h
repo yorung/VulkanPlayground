@@ -18,9 +18,8 @@ class FontMan
 	static const int SPRITE_VERTS = SPRITE_MAX * 4;
 	CharSprite charSprites[SPRITE_MAX];
 	int numSprites;
+	AFRenderStates renderStates;
 	AFDynamicQuadListVertexBuffer quadListVertexBuffer;
-	VkPipelineLayout pipelineLayout = 0;
-	VkPipeline pipeline = 0;
 	bool dirty = false;
 	bool Build(const CharSignature& signature);
 	bool Cache(const CharSignature& code);

@@ -95,8 +95,11 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, void
 void afSafeDeleteTexture(TextureContext& textureContext);
 
 void afBindBuffer(VkPipelineLayout pipelineLayout, int size, const void* buf, int descritorSetIndex);
+void afBindBuffer(int size, const void* buf, int descritorSetIndex);
 void afBindTexture(VkPipelineLayout pipelineLayout, const TextureContext& textureContext, int descritorSetIndex);
+void afBindTexture(const TextureContext& textureContext, int descritorSetIndex);
 
+void afSetVertexBuffer(VBOID id);
 void afSetIndexBuffer(IBOID id);
 
 void afDrawIndexed(int numIndices, int start = 0, int instanceCount = 1);
@@ -105,6 +108,16 @@ void afDraw(int numVertices, int start = 0, int instanceCount = 1);
 inline void afSetTextureName(const TextureContext& tex, const char* name)
 {
 }
+
+class AFRenderStates {
+	uint32_t flags = AFRS_NONE;
+	VkPipeline pipeline = 0;
+	VkPipelineLayout pipelineLayout = 0;
+public:
+	void Create(const char* shaderName, int numInputElements = 0, const InputElement* inputElements = nullptr, uint32_t flags = AFRS_NONE);
+	void Apply();
+	void Destroy();
+};
 
 class AFDynamicQuadListVertexBuffer
 {

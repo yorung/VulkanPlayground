@@ -1,9 +1,8 @@
 class Triangle
 {
 	VBOID vertexBuffer;
-	BufferContext indexBuffer;
-	VkPipelineLayout pipelineLayout = 0;
-	VkPipeline pipeline = 0;
+	IBOID indexBuffer;
+	AFRenderStates renderStates;
 public:
 	void Create();
 	void Draw();

@@ -16,12 +16,11 @@ static InputElement attributes[] =
 
 void Triangle::Draw()
 {
+	renderStates.Apply();
 	Mat mat = q2m(Quat(Vec3(0, 0, 1), (float)GetTime()));
-	afBindBuffer(pipelineLayout, sizeof(mat), &mat, 0);
+	afBindBuffer(sizeof(mat), &mat, 0);
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
-	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-	VkDeviceSize offsets[1] = {};
-	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
+	afSetVertexBuffer(vertexBuffer);
 	afSetIndexBuffer(indexBuffer);
 	afDrawIndexed(3);
 //	afDraw(3);
@@ -30,10 +29,7 @@ void Triangle::Draw()
 void Triangle::Create()
 {
 	VkDevice device = deviceMan.GetDevice();
-	const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &deviceMan.commonUboDescriptorSetLayout};
-	afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
-
-	pipeline = deviceMan.CreatePipeline("solid", pipelineLayout, arrayparam(attributes), AFRS_DEPTH_ENABLE);
+	renderStates.Create("solid", arrayparam(attributes), AFRS_DEPTH_ENABLE);
 
 	TriangleVertex vertexPositions[3];
 	for (int i = 0; i < 3; i++)
@@ -53,7 +49,5 @@ void Triangle::Destroy()
 {
 	afSafeDeleteBuffer(indexBuffer);
 	afSafeDeleteBuffer(vertexBuffer);
-	VkDevice device = deviceMan.GetDevice();
-	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
-	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
+	renderStates.Destroy();
 }

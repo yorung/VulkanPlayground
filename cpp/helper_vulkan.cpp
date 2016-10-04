@@ -7,6 +7,8 @@ static const VkComponentMapping depthComponentMapping = {};
 
 DeviceManVK deviceMan;
 
+static VkPipelineLayout s_pipelineLayout = 0;
+
 VkResult _afHandleVKError(const char* file, const char* func, int line, const char* command, VkResult result)
 {
 	const char *err = nullptr;
@@ -258,10 +260,27 @@ void afBindBuffer(VkPipelineLayout pipelineLayout, int size, const void* buf, in
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descritorSetIndex, 1, &deviceMan.commonUboDescriptorSet, 1, &dynamicOffset);
 }
 
+void afBindBuffer(int size, const void* buf, int descritorSetIndex)
+{
+	afBindBuffer(s_pipelineLayout, size, buf, descritorSetIndex);
+}
+
 void afBindTexture(VkPipelineLayout pipelineLayout, const TextureContext& textureContext, int descritorSetIndex)
 {
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
 	vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descritorSetIndex, 1, &textureContext.descriptorSet, 0, nullptr);
+}
+
+void afBindTexture(const TextureContext& textureContext, int descritorSetIndex)
+{
+	afBindTexture(s_pipelineLayout, textureContext, descritorSetIndex);
+}
+
+void afSetVertexBuffer(VBOID vertexBuffer)
+{
+	VkDeviceSize offsets[1] = {};
+	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
+	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
 }
 
 void afSetIndexBuffer(IBOID indexBuffer)
@@ -618,4 +637,48 @@ void AFBufferStackAllocator::ResetAllocation()
 void AFBufferStackAllocator::Destroy()
 {
 	afSafeDeleteBuffer(bufferContext);
+}
+
+void AFRenderStates::Create(const char* shaderName, int numInputElements, const InputElement* inputElements, uint32_t flags)
+{
+	VkDevice device = deviceMan.GetDevice();
+
+	// FIXME: hard corded pipeline layout
+	if (!strcmp(shaderName, "solid"))
+	{
+		const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, 1, &deviceMan.commonUboDescriptorSetLayout };
+		afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
+	}
+	else if (!strcmp(shaderName, "sky_photosphere") || !strcmp(shaderName, "sky_cubemap"))
+	{
+		VkDescriptorSetLayout layouts[] = { deviceMan.commonUboDescriptorSetLayout, deviceMan.commonTextureDescriptorSetLayout };
+		const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(layouts) };
+		afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
+	}
+	else if (!strcmp(shaderName, "font"))
+	{
+		VkDescriptorSetLayout layouts[] = { deviceMan.commonTextureDescriptorSetLayout };
+		const VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, nullptr, 0, arrayparam(layouts) };
+		afHandleVKError(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
+	}
+	else
+	{
+		assert(0);
+	}
+
+	pipeline = deviceMan.CreatePipeline(shaderName, pipelineLayout, numInputElements, inputElements, flags);
+}
+
+void AFRenderStates::Apply()
+{
+	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
+	vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+	s_pipelineLayout = pipelineLayout;
+}
+
+void AFRenderStates::Destroy()
+{
+	VkDevice device = deviceMan.GetDevice();
+	afSafeDeleteVk(vkDestroyPipelineLayout, device, pipelineLayout);
+	afSafeDeleteVk(vkDestroyPipeline, device, pipeline);
 }

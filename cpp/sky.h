@@ -1,8 +1,7 @@
 class Sky
 {
 	TextureContext texture;
-	VkPipelineLayout pipelineLayout = 0;
-	VkPipeline pipeline = 0;
+	AFRenderStates renderStates;
 public:
 	void Create();
 	void Draw();
