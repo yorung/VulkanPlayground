@@ -47,7 +47,7 @@ void FontMan::Create()
 		assert(0);
 		return;
 	}
-	texture = afCreateTexture2D(AFF_R8G8B8A8_UNORM, IVec2(TEX_W, TEX_H), nullptr);
+	texture = afCreateDynamicTexture(AFF_R8G8B8A8_UNORM, IVec2(TEX_W, TEX_H));
 	afSetTextureName(texture, __FUNCTION__);
 	renderStates.Create("font", arrayparam(elements), AFRS_ALPHA_BLEND | AFRS_PRIMITIVE_TRIANGLELIST);
 	quadListVertexBuffer.Create(sizeof(FontVertex), SPRITE_MAX);

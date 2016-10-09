@@ -169,7 +169,7 @@ static VkImageAspectFlags FormatToAspectFlags(VkFormat format)
 	return VK_IMAGE_ASPECT_COLOR_BIT;
 }
 
-TextureContext afCreateTexture2D(VkFormat format, const IVec2& size, void *image)
+TextureContext afCreateDynamicTexture(VkFormat format, const IVec2& size, void *image)
 {
 	VkFormatProperties formatProperties;
 	vkGetPhysicalDeviceFormatProperties(deviceMan.physicalDevice, format, &formatProperties);
@@ -487,7 +487,7 @@ void DeviceManVK::Create(HWND hWnd)
 	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, swapChainImages));
 
 	// depth stencil(WIP)
-	depthStencil = afCreateTexture2D(VK_FORMAT_D24_UNORM_S8_UINT, IVec2(rc.right, rc.bottom), nullptr);
+	depthStencil = afCreateDynamicTexture(VK_FORMAT_D24_UNORM_S8_UINT, IVec2(rc.right, rc.bottom), nullptr);
 
 	// render pass
 	const VkAttachmentReference colorAttachmentReference = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
