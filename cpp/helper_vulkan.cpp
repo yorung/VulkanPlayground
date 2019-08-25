@@ -183,8 +183,8 @@ TextureContext afCreateDynamicTexture(VkFormat format, const IVec2& size, void *
 	TextureContext textureContext;
 	textureContext.device = device;
 	textureContext.format = format;
-	const VkImageCreateInfo dynamicTextureCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_UNDEFINED };
-	const VkImageCreateInfo depthStencilCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_UNDEFINED };
+	const VkImageCreateInfo dynamicTextureCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_SAMPLED_BIT };
+	const VkImageCreateInfo depthStencilCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, 0, VK_IMAGE_TYPE_2D, format,{ (uint32_t)size.x, (uint32_t)size.y, 1 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT };
 	afHandleVKError(vkCreateImage(device, isDepth ? &depthStencilCreateInfo : &dynamicTextureCreateInfo, nullptr, &textureContext.image));
 
 	VkMemoryRequirements req = {};
@@ -223,7 +223,7 @@ SRVID afCreateTexture2D(AFFormat format, const struct TexDesc& desc, int mipCoun
 	VkDevice device = deviceMan.GetDevice();
 	textureContext.device = device;
 	textureContext.format = format;
-	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, (desc.isCubeMap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u), VK_IMAGE_TYPE_2D, format,{ (uint32_t)desc.size.x, (uint32_t)desc.size.y, 1 }, (uint32_t)mipCount, desc.isCubeMap ? 6u : 1u, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_IMAGE_LAYOUT_UNDEFINED };
+	const VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr, (desc.isCubeMap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u), VK_IMAGE_TYPE_2D, format,{ (uint32_t)desc.size.x, (uint32_t)desc.size.y, 1 }, (uint32_t)mipCount, desc.isCubeMap ? 6u : 1u, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT };
 	afHandleVKError(vkCreateImage(device, &imageCreateInfo, nullptr, &textureContext.image));
 
 	VkMemoryRequirements req = {};
