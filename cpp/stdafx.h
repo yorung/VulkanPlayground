@@ -5,6 +5,8 @@
 
 #pragma once
 
+#define AF_WAIT_VBLANK 0
+
 #define NOMINMAX
 #define _USE_MATH_DEFINES
 #include <windows.h>

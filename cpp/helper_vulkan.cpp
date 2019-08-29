@@ -4,6 +4,7 @@
 
 static const VkComponentMapping colorComponentMapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 static const VkComponentMapping depthComponentMapping = {};
+static const VkClearValue clearValues[2] = { { 0.0f, 0.0f, 0.0f },{ 1.0f, 0u } };
 
 DeviceManVK deviceMan;
 
@@ -304,7 +305,7 @@ void afSetVertexBuffer(VBOID vertexBuffer)
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.buffer, offsets);
 }
 
-void afSetIndexBuffer(IBOID indexBuffer)
+void afSetIndexBuffer(AFBufferResource indexBuffer)
 {
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
 	vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, AFIndexTypeToDevice);
@@ -312,14 +313,14 @@ void afSetIndexBuffer(IBOID indexBuffer)
 
 void afDrawIndexed(int numIndices, int start, int instanceCount)
 {
-	assert(!start);
+	afVerify(!start);
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
 	vkCmdDrawIndexed(commandBuffer, numIndices, instanceCount, 0, 0, 0);
 }
 
 void afDraw(int numVertices, int start, int instanceCount)
 {
-	assert(!start);
+	afVerify(!start);
 	VkCommandBuffer commandBuffer = deviceMan.commandBuffer;
 	vkCmdDraw(commandBuffer, numVertices, instanceCount, 0, 0);
 }
@@ -328,8 +329,11 @@ static uint32_t GetVkFormatSize(VkFormat format)
 {
 	switch (format)
 	{
-	case VK_FORMAT_R32G32B32_SFLOAT: return 12;
-	case VK_FORMAT_R32G32_SFLOAT: return 8;
+	case AFF_R8G8B8A8_UNORM: return 4;
+	case AFF_R32G32B32_FLOAT: return 12;
+	case AFF_R32G32_FLOAT: return 8;
+	case AFF_R8G8B8A8_UINT: return 4;
+	case AFF_R32_UINT: return 4;
 	}
 	assert(0);
 	return 0;
@@ -369,6 +373,18 @@ static VkPrimitiveTopology RenderFlagsToPrimitiveTopology(uint32_t flags)
 		return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	}
 	return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+}
+
+static bool IsPresentModeSupported(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, VkPresentModeKHR presentMode)
+{
+	uint32_t numPresentModes = 0;
+	VkPresentModeKHR presentModes[VK_PRESENT_MODE_RANGE_SIZE_KHR] = {};
+	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, nullptr));
+	assert(numPresentModes <= _countof(presentModes));
+	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, presentModes));
+	auto it = std::find(presentModes, presentModes + numPresentModes, presentMode);
+	assert(it != presentModes + numPresentModes);
+	return it != presentModes + numPresentModes;
 }
 
 VkPipeline DeviceManVK::CreatePipeline(const char* name, VkPipelineLayout pipelineLayout, uint32_t numAttributes, const VkVertexInputAttributeDescription attributes[], uint32_t flags)
@@ -427,13 +443,7 @@ void DeviceManVK::Create(HWND hWnd)
 	uint32_t numDevices = _countof(devices);
 	afHandleVKError(vkEnumeratePhysicalDevices(inst, &numDevices, devices));
 	physicalDevice = devices[0];
-
-	float priorities[] = { 0 };
-	const VkDeviceQueueCreateInfo devQueueInfos[] = { { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, 0, 1, priorities } };
-	const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-	const VkPhysicalDeviceFeatures features = {};
-	const VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, arrayparam(deviceExtensions), &features };
-	afHandleVKError(vkCreateDevice(physicalDevice, &devInfo, nullptr, &device));
+	afVerify(physicalDevice);
 
 	// query properties
 	uint32_t numQueueFamilyProperties = 0;
@@ -448,6 +458,13 @@ void DeviceManVK::Create(HWND hWnd)
 	vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
 	vkGetPhysicalDeviceMemoryProperties(physicalDevice, &physicalDeviceMemoryProperties);
 
+	float priorities[] = { 0 };
+	const VkDeviceQueueCreateInfo devQueueInfos[] = { { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, 0, 1, priorities } };
+	const char* deviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	VkPhysicalDeviceFeatures features = {};
+	features.fillModeNonSolid = VK_TRUE;
+	const VkDeviceCreateInfo devInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, nullptr, 0, 1, devQueueInfos, 0, nullptr, arrayparam(deviceExtensions), &features };
+	afHandleVKError(vkCreateDevice(physicalDevice, &devInfo, nullptr, &device));
 	// preallocated resources and descriptors
 	uboAllocator.Create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 1024);
 	static const uint32_t descriptorPoolSize = 10;
@@ -465,7 +482,7 @@ void DeviceManVK::Create(HWND hWnd)
 	const VkDescriptorBufferInfo descriptorBufferInfo = { uboAllocator.bufferContext.buffer, 0, VK_WHOLE_SIZE };
 	const VkWriteDescriptorSet writeDescriptorSets[] = { { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, nullptr, commonUboDescriptorSet, 0, 0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, nullptr, &descriptorBufferInfo } };
 	vkUpdateDescriptorSets(device, arrayparam(writeDescriptorSets), 0, nullptr);
-	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, nullptr, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR };
+	const VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO, nullptr, 0, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, 0, VK_FALSE, 1.0f };
 	vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler);
 	const VkPipelineCacheCreateInfo pipelineCacheCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
 	afHandleVKError(vkCreatePipelineCache(device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
@@ -488,18 +505,15 @@ void DeviceManVK::Create(HWND hWnd)
 	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &numSurfaceFormats, nullptr));
 	assert(numSurfaceFormats <= _countof(surfaceFormats));
 	afHandleVKError(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &numSurfaceFormats, surfaceFormats));
-	uint32_t numPresentModes = 0;
-	VkPresentModeKHR presentModes[32] = {};
-	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, nullptr));
-	assert(numPresentModes <= _countof(presentModes));
-	afHandleVKError(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &numPresentModes, presentModes));
+	VkPresentModeKHR presentMode = AF_WAIT_VBLANK ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR;
+	IsPresentModeSupported(physicalDevice, surface, presentMode);
 	VkSurfaceCapabilitiesKHR surfaceCaps = {};
 	afHandleVKError(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCaps));
 	VkBool32 physicalDeviceSurfaceSupport = VK_FALSE;
 	afHandleVKError(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, 0, surface, &physicalDeviceSurfaceSupport));
 	assert(physicalDeviceSurfaceSupport);
 	GetClientRect(hWnd, &rc);
-	const VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace,{ uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentModes[0], VK_TRUE };
+	const VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, nullptr, 0, surface, surfaceCaps.minImageCount, surfaceFormats[0].format, surfaceFormats[0].colorSpace,{ uint32_t(rc.right), uint32_t(rc.bottom) }, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_SHARING_MODE_EXCLUSIVE, 0, nullptr, VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, presentMode, VK_TRUE };
 	afHandleVKError(vkCreateSwapchainKHR(device, &swapchainInfo, nullptr, &swapchain));
 	afHandleVKError(vkGetSwapchainImagesKHR(device, swapchain, &swapChainCount, nullptr));
 	assert(swapChainCount <= _countof(swapChainImages));
@@ -534,7 +548,6 @@ void DeviceManVK::BeginScene()
 {
 	afHandleVKError(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &frameIndex));
 
-	const VkClearValue clearValues[2] = { { 0.2f, 0.5f, 0.5f }, { 1.0f, 0u } };
 	const VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, nullptr, renderPass, framebuffers[frameIndex],{ {},{ (uint32_t)rc.right, (uint32_t)rc.bottom } }, arrayparam(clearValues) };
 	vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 

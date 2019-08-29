@@ -116,8 +116,8 @@ void afBindBuffer(int size, const void* buf, int descritorSetIndex);
 void afBindTexture(VkPipelineLayout pipelineLayout, const TextureContext& textureContext, int descritorSetIndex);
 void afBindTexture(const TextureContext& textureContext, int descritorSetIndex);
 
-void afSetVertexBuffer(VBOID id);
-void afSetIndexBuffer(IBOID id);
+void afSetVertexBuffer(AFBufferResource id);
+void afSetIndexBuffer(AFBufferResource id);
 
 void afDrawIndexed(int numIndices, int start = 0, int instanceCount = 1);
 void afDraw(int numVertices, int start = 0, int instanceCount = 1);
