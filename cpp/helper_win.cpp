@@ -159,14 +159,18 @@ bool ProcessWindowMessage(HWND hWnd, HACCEL hAccelTable)
 	}
 }
 
-namespace Gdiplus {
+namespace Gdiplus
+{
 	using std::min;
 	using std::max;
 }
+#pragma warning(push)
+#pragma warning(disable:4458)
 #include <gdiplus.h>
+#pragma warning(pop)
 #pragma comment(lib, "gdiplus.lib")
 
-static bool LoadImageViaGdiPlus(const char* name, IVec2& size, std::vector<uint32_t>& col)
+bool LoadImageViaGdiPlus(const char* name, IVec2& size, std::vector<uint32_t>& col)
 {
 	Gdiplus::GdiplusStartupInput gdiplusStartupInput;
 	ULONG_PTR gdiplusToken;
@@ -199,11 +203,12 @@ static bool LoadImageViaGdiPlus(const char* name, IVec2& size, std::vector<uint3
 	return w && h;
 }
 
-SRVID LoadTextureViaOS(const char* name, IVec2& size)
+AFTexRef LoadTextureViaOS(const char* name, IVec2& size)
 {
 	std::vector<uint32_t> col;
-	if (!LoadImageViaGdiPlus(name, size, col)) {
-		return SRVID();
+	if (!LoadImageViaGdiPlus(name, size, col))
+	{
+		return AFTexRef();
 	}
 	TexDesc desc;
 	desc.size = size;

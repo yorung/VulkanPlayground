@@ -81,11 +81,11 @@ bool DIB::Create(int w, int h, int bits, int level)
 	bh->biWidth = w;
 	bh->biHeight = -h;	// top down
 	bh->biPlanes = 1;
-	bh->biBitCount = bits;
+	bh->biBitCount = (WORD)bits;
 
 	if (bits == 8) {
 		for (int i = 0; i < 256; i++) {
-			int v = std::min(i * 255 / level, 255);
+			BYTE v = (BYTE)std::min(i * 255 / level, 255);
 			bmi.bmiColors[i].rgbRed = v;
 			bmi.bmiColors[i].rgbGreen = v;
 			bmi.bmiColors[i].rgbBlue = v;
@@ -168,28 +168,6 @@ void DIB::Clear(pixel color)
 		}
 	}
 }
-
-#ifdef _MSC_VER
-static bool dibCopy32(DIB *dib, BITMAPINFO *bi, void *bits)
-{
-	int srcH = bi->bmiHeader.biHeight;
-	if (dib->getW() != bi->bmiHeader.biWidth || dib->getH() != abs(srcH)) {
-		return false;
-	}
-
-	if (bi->bmiHeader.biBitCount != 32) {
-		return false;
-	}
-
-	for (int y = 0; y < dib->getH(); y++) {
-		int srcY = srcH > 0 ? srcH - 1 - y : y;	// support both bottom-up and top-down
-		void *dst = dib->referPixel(0, y);
-		void *src = (DWORD*)bits + dib->getW() * srcY;
-		memcpy(dst, src, dib->getW() * sizeof(DWORD));
-	}
-	return true;
-}
-#endif
 
 #ifdef _MSC_VER
 bool DIB::LoadFromBmp(const char *file)

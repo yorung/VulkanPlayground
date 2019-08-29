@@ -7,8 +7,18 @@ typedef VkFormat AFFormat;
 #define AFF_BC2_UNORM VK_FORMAT_BC2_UNORM_BLOCK
 #define AFF_BC3_UNORM VK_FORMAT_BC3_UNORM_BLOCK
 #define AFF_R8G8B8A8_UNORM VK_FORMAT_R8G8B8A8_UNORM
+#define AFF_B8G8R8A8_UNORM VK_FORMAT_B8G8R8A8_UNORM
+#define AFF_R16G16B16A16_FLOAT VK_FORMAT_R16G16B16A16_SFLOAT
+#define AFF_R32G32B32A32_FLOAT VK_FORMAT_R32G32B32A32_SFLOAT
 #define AFF_R32G32B32_FLOAT VK_FORMAT_R32G32B32_SFLOAT
 #define AFF_R32G32_FLOAT VK_FORMAT_R32G32_SFLOAT
+#define AFF_R8G8B8A8_UINT VK_FORMAT_R8G8B8A8_UINT
+#define AFF_D32_FLOAT VK_FORMAT_D32_SFLOAT
+#define AFF_R32_FLOAT VK_FORMAT_R32_SFLOAT
+#define AFF_R32_UINT VK_FORMAT_R32_UINT
+#define AFF_R32_TYPELESS VK_FORMAT_R32_SFLOAT
+#define AFF_D24_UNORM_S8_UINT VK_FORMAT_D24_UNORM_S8_UINT
+#define AFF_D32_FLOAT_S8_UINT VK_FORMAT_D32_SFLOAT_S8_UINT
 
 typedef VkVertexInputAttributeDescription InputElement;
 class CInputElement : public InputElement
@@ -75,8 +85,9 @@ struct AFTexSubresourceData
 	uint32_t pitchSlice;
 };
 
-struct TextureContext
+class TextureContext
 {
+public:
 	VkDevice device = 0;
 	VkFormat format = VK_FORMAT_UNDEFINED;
 	VkImage image = 0;
@@ -86,11 +97,13 @@ struct TextureContext
 	bool operator !() { return !image; }
 };
 typedef TextureContext SRVID;
+typedef TextureContext AFTexRef;
 
-SRVID afLoadTexture(const char* name, TexDesc& desc);
-SRVID LoadTextureViaOS(const char* name, IVec2& size);
-SRVID afCreateDynamicTexture(VkFormat format, const IVec2& size, void *image = nullptr);
-SRVID afCreateTexture2D(AFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
+
+AFTexRef afLoadTexture(const char* name, TexDesc& desc);
+AFTexRef LoadTextureViaOS(const char* name, IVec2& size);
+AFTexRef afCreateDynamicTexture(VkFormat format, const IVec2& size, void *image = nullptr);
+AFTexRef afCreateTexture2D(AFFormat format, const struct TexDesc& desc, int mipCount, const AFTexSubresourceData datas[]);
 void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, void *image);
 void afSafeDeleteTexture(TextureContext& textureContext);
 
@@ -109,7 +122,8 @@ inline void afSetTextureName(const TextureContext& tex, const char* name)
 {
 }
 
-class AFRenderStates {
+class AFRenderStates
+{
 	uint32_t flags = AFRS_NONE;
 	VkPipeline pipeline = 0;
 	VkPipelineLayout pipelineLayout = 0;

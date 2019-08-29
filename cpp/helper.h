@@ -56,18 +56,23 @@ enum SamplerType {
 	AFST_MAX
 };
 
-struct CharSignature {
+struct CharSignature
+{
 	wchar_t code;
 	int fontSize;
 	inline int GetOrder() const { return (code << 8) | fontSize; }
 	bool operator < (const CharSignature& r) const { return GetOrder() < r.GetOrder(); }
 	bool operator == (const CharSignature& r) const { return GetOrder() == r.GetOrder(); }
 };
-struct CharDesc {
+
+struct CharDesc
+{
 	Vec2 srcWidth;
 	Vec2 distDelta;
 	float step;
 };
+
 void MakeFontBitmap(const char* fontName, const CharSignature& code, class DIB& dib, CharDesc& desc);
 
-void afVerify(bool ok);
+void _afVerify(const char* file, const char* func, int line, const char* command, bool result);
+#define afVerify(command) do{ _afVerify(__FILE__, __FUNCTION__, __LINE__, #command, !!(command)); } while(0)

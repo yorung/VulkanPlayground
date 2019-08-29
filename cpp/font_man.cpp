@@ -5,7 +5,8 @@
 
 FontMan fontMan;
 
-struct FontVertex {
+struct FontVertex
+{
 	Vec2 pos;
 	Vec2 coord;
 };
@@ -121,20 +122,24 @@ void FontMan::FlushToTexture()
 
 void FontMan::Render()
 {
-	if (!numSprites) {
+	if (!numSprites)
+	{
 		return;
 	}
-	for (int i = 0; i < numSprites; i++) {
+	for (int i = 0; i < numSprites; i++)
+	{
 		Cache(charSprites[i].signature);
 	}
 	FlushToTexture();
 
 	Vec2 scrSize = systemMisc.GetScreenSize();
 	static FontVertex verts[4 * SPRITE_MAX];
-	for (int i = 0; i < numSprites; i++) {
+	for (int i = 0; i < numSprites; i++)
+	{
 		CharSprite& cs = charSprites[i];
 		Caches::iterator it = caches.find(cs.signature);
-		if (it == caches.end()) {
+		if (it == caches.end())
+		{
 			aflog("something wrong");
 			continue;
 		}
@@ -154,23 +159,27 @@ void FontMan::Render()
 
 void FontMan::DrawChar(Vec2& pos, const CharSignature& sig)
 {
-	if (!texture) {
+	if (!texture)
+	{
 		return;
 	}
 
-	if (numSprites >= SPRITE_MAX) {
+	if (numSprites >= SPRITE_MAX)
+	{
 		return;
 	}
 	Cache(sig);
 
-	if (sig.code != 32) {	// whitespace
+	if (sig.code != 32)	// whitespace
+	{
 		CharSprite& cs = charSprites[numSprites++];
 		cs.signature = sig;
 		cs.pos = pos;
 	}
 
 	Caches::iterator it = caches.find(sig);
-	if (it != caches.end()) {
+	if (it != caches.end())
+	{
 		pos.x += it->second.desc.step;
 	}
 }

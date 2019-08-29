@@ -62,7 +62,7 @@ void afSafeDeleteBuffer(BufferContext& buffer)
 	afSafeDeleteVk(vkFreeMemory, buffer.device, buffer.memory);
 }
 
-void WriteBuffer(BufferContext& buffer, int size, const void* srcData)
+void afWriteBuffer(BufferContext& buffer, int size, const void* srcData)
 {
 	assert(buffer.mappedMemory);
 	memcpy(buffer.mappedMemory, srcData, size);
@@ -99,7 +99,7 @@ BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPh
 	buffer.size = size;
 	if (srcData)
 	{
-		WriteBuffer(buffer, size, srcData);
+		afWriteBuffer(buffer, size, srcData);
 	}
 	return buffer;
 }

@@ -15,6 +15,17 @@ double GetTime()
 	return std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1>>>(now - start).count();
 }
 
+void _afVerify(const char* file, const char* func, int line, const char* command, bool ok)
+{
+	if (ok)
+	{
+		return;
+	}
+	aflog("afVerify Fatal: %s %d %s %s", file, line, func, command);
+	*(uint32_t*)(4) = 1;	// crash
+}
+
+
 IBOID afCreateTiledPlaneIBO(int numTiles, int* numIndies)
 {
 	const int numVert = numTiles + 1;
@@ -182,14 +193,4 @@ IBOID afCreateQuadListIndexBuffer(int numQuads)
 		indi[i] = rectIdx * 4 + tbl[vertIdx];
 	}
 	return afCreateIndexBuffer(numIndi, &indi[0]);
-}
-
-void afVerify(bool ok)
-{
-	if (ok) {
-		return;
-	}
-	aflog("afVerify: Fatal");
-	while (strlen(" ")) {
-	}
 }
