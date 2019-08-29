@@ -68,24 +68,41 @@ void afWriteBuffer(BufferContext& buffer, int size, const void* srcData)
 	memcpy(buffer.mappedMemory, srcData, size);
 }
 
+static VkBufferUsageFlagBits BufferTypeToBufferUsageFlagBits(AFBufferType bufferType)
+{
+	switch (bufferType)
+	{
+	case AFBT_VERTEX:
+	case AFBT_VERTEX_CPUWRITE:
+		return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	case AFBT_INDEX:
+		return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+	case AFBT_CONSTANT:
+	case AFBT_CONSTANT_CPUWRITE:
+		return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	}
+	assert(0);
+	return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+}
+
 VBOID afCreateVertexBuffer(int size, const void* srcData)
 {
-	return CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, srcData);
+	return afCreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, srcData);
 }
 
 IBOID afCreateIndexBuffer(int numIndi, const AFIndex* indi)
 {
 	assert(indi);
 	int size = numIndi * sizeof(AFIndex);
-	return CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, indi);
+	return afCreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, indi);
 }
 
 UBOID afCreateUBO(int size, const void* srcData)
 {
-	return CreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, srcData);
+	return afCreateBuffer(deviceMan.GetDevice(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, deviceMan.physicalDeviceMemoryProperties, size, srcData);
 }
 
-BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData)
+BufferContext afCreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData)
 {
 	const VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, nullptr, 0, (VkDeviceSize)size, usage };
 	BufferContext buffer;
@@ -130,7 +147,7 @@ void afWriteTexture(TextureContext& textureContext, const TexDesc& texDesc, int 
 	}
 
 	VkDevice device = deviceMan.GetDevice();
-	BufferContext staging = CreateBuffer(device, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, deviceMan.physicalDeviceMemoryProperties, (int)total, nullptr);
+	BufferContext staging = afCreateBuffer(device, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, deviceMan.physicalDeviceMemoryProperties, (int)total, nullptr);
 	for (uint32_t i = 0; i < subResources; i++)
 	{
 		memcpy((uint8_t*)staging.mappedMemory + copyInfo[i].bufferOffset, datas[i].ptr, datas[i].pitchSlice);
@@ -617,7 +634,7 @@ void DeviceManVK::Flush()
 
 void AFBufferStackAllocator::Create(VkBufferUsageFlags usage, int size)
 {
-	bufferContext = CreateBuffer(deviceMan.GetDevice(), usage, deviceMan.physicalDeviceMemoryProperties, size, nullptr);
+	bufferContext = afCreateBuffer(deviceMan.GetDevice(), usage, deviceMan.physicalDeviceMemoryProperties, size, nullptr);
 	ResetAllocation();
 }
 

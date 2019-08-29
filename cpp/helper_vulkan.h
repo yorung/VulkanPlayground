@@ -1,3 +1,5 @@
+#include "AFGraphicsDefinitions.inl"
+
 typedef unsigned short AFIndex;
 #define AFIndexTypeToDevice VK_INDEX_TYPE_UINT16
 
@@ -65,10 +67,12 @@ struct BufferContext
 	VkMemoryRequirements memoryRequirement = {};
 	bool operator !() { return !buffer; }
 };
+typedef BufferContext AFBufferResource;
 
 void afSafeDeleteBuffer(BufferContext& buffer);
-void WriteBuffer(BufferContext& buffer, int size, const void* srcData);
-BufferContext CreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData);
+void afWriteBuffer(BufferContext& buffer, int size, const void* srcData);
+
+AFBufferResource afCreateBuffer(VkDevice device, VkBufferUsageFlags usage, const VkPhysicalDeviceMemoryProperties& memoryProperties, int size, const void* srcData);
 
 typedef BufferContext VBOID;
 typedef BufferContext IBOID;
